@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015-2021, the Selfie Project authors. All rights reserved.
+Copyright (c) the Selfie Project authors. All rights reserved.
 Please see the AUTHORS file for details. Use of this source code is
 governed by a BSD license that can be found in the LICENSE file.
 
@@ -206,16 +206,14 @@ uint64_t* zmalloc(uint64_t size); // use this to allocate zeroed memory
 
 char* SELFIE_URL = (char*) 0;
 
+uint64_t IS64BITSYSTEM = 1; // flag indicating 64-bit selfie
+uint64_t IS64BITTARGET = 1; // flag indicating 64-bit target
+
 uint64_t SIZEOFUINT64       = 8;  // in bytes
 uint64_t SIZEOFUINT64INBITS = 64; // SIZEOFUINT64 * 8
 
-uint64_t SIZEOFUINT64STAR       = 8; // in bytes, must be the same as SIZEOFUINT64
+uint64_t SIZEOFUINT64STAR       = 8;  // in bytes, must be the same as SIZEOFUINT64
 uint64_t SIZEOFUINT64STARINBITS = 64; // SIZEOFUINT64STAR * 8
-
-uint64_t WORDSIZE       = 8;  // (double) word size in bytes, must be the same as SIZEOFUINT64
-uint64_t WORDSIZEINBITS = 64; // WORDSIZE * 8
-
-uint64_t IS64BITSYSTEM = 1; // flag indicating 64-bit selfie
 
 uint64_t* power_of_two_table;
 
@@ -223,6 +221,15 @@ uint64_t UINT64_MAX; // maximum numerical value of an unsigned 64-bit integer
 
 uint64_t INT64_MAX; // maximum numerical value of a signed 64-bit integer
 uint64_t INT64_MIN; // minimum numerical value of a signed 64-bit integer
+
+uint64_t SINGLEWORDSIZE       = 4;  // single-word size in bytes
+uint64_t SINGLEWORDSIZEINBITS = 32; // single-word size in bits
+
+uint64_t SIZEOFUINT = 8; // size of target-dependent unsigned integer in bytes
+uint64_t UINT_MAX;       // maximum numerical value of target-dependent unsigned integer
+
+uint64_t WORDSIZE       = 8;  // target-dependent word size in bytes
+uint64_t WORDSIZEINBITS = 64; // WORDSIZE * 8
 
 uint64_t CHAR_EOF          =  -1; // end of file
 uint64_t CHAR_BACKSPACE    =   8; // ASCII code 8  = backspace
@@ -308,6 +315,10 @@ uint64_t output_cursor = 0; // cursor for output buffer
 void init_library() {
   uint64_t i;
 
+  if (SELFIE_URL)
+    // avoid repeated initialization in tools
+    return;
+
   SELFIE_URL = "selfie.cs.uni-salzburg.at";
 
   // determine actual size of uint64_t
@@ -317,10 +328,6 @@ void init_library() {
   // determine actual size of uint64_t*
   SIZEOFUINT64STAR       = (uint64_t) ((uint64_t**) SELFIE_URL + 1) - (uint64_t) SELFIE_URL;
   SIZEOFUINT64STARINBITS = SIZEOFUINT64STAR * 8;
-
-  // WORDSIZE must be the same as SIZEOFUINT64
-  WORDSIZE       = SIZEOFUINT64;
-  WORDSIZEINBITS = WORDSIZE * 8;
 
   // powers of two table with SIZEOFUINT64INBITS entries for 2^0 to 2^(SIZEOFUINT64INBITS - 1)
   power_of_two_table = smalloc(SIZEOFUINT64INBITS * SIZEOFUINT64);
@@ -342,6 +349,12 @@ void init_library() {
   // compute 64-bit signed integer range using unsigned integer arithmetic
   INT64_MIN = two_to_the_power_of(SIZEOFUINT64INBITS - 1);
   INT64_MAX = INT64_MIN - 1;
+
+  // target-dependent, see init_target()
+  SIZEOFUINT     = SIZEOFUINT64;
+  UINT_MAX       = UINT64_MAX;
+  WORDSIZE       = SIZEOFUINT64;
+  WORDSIZEINBITS = WORDSIZE * 8;
 
   // allocate and touch to make sure memory is mapped for read calls
   character_buffer  = smalloc(SIZEOFUINT64);
@@ -771,7 +784,7 @@ char* bump_name = (char*) 0;
 
 void init_bootstrapping() {
   // caution: length of string literals used as identifiers must be
-  // multiple of WORDSIZE to avoid out-of-bound array access warnings
+  // multiple of SIZEOFUINT64 to avoid out-of-bound array access warnings
   // during bootstrapping; trailing spaces are removed by string_shrink
   // resulting in unique hash for global symbol table
   main_name = string_shrink("main   ");
@@ -806,10 +819,11 @@ uint64_t is_system_register(uint64_t reg);
 uint64_t is_argument_register(uint64_t reg);
 uint64_t is_temporary_register(uint64_t reg);
 
-uint64_t read_register(uint64_t reg);
-void     write_register(uint64_t reg);
+void read_register_wrap(uint64_t reg, uint64_t wrap);
+void read_register(uint64_t reg);
 
-void update_register_counters();
+void write_register_wrap(uint64_t reg, uint64_t wrap);
+void write_register(uint64_t reg);
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -980,6 +994,7 @@ uint64_t funct7 = 0;
 // ---------------------------- BINARY -----------------------------
 // -----------------------------------------------------------------
 
+void reset_binary();
 void reset_instruction_counters();
 
 uint64_t get_total_number_of_instructions();
@@ -990,14 +1005,16 @@ void print_instruction_counter_with_nops(uint64_t counter, uint64_t nops, uint64
 
 void print_instruction_counters();
 
-uint64_t get_low_instruction(uint64_t word);
-uint64_t get_high_instruction(uint64_t word);
+uint64_t get_low_word(uint64_t word);
+uint64_t get_high_word(uint64_t word);
 
-uint64_t load_code(uint64_t caddr);
-void     store_code(uint64_t caddr, uint64_t code);
+uint64_t load_word(uint64_t* memory, uint64_t waddr, uint64_t is_double_word);
+void     store_word(uint64_t* memory, uint64_t waddr, uint64_t is_double_word, uint64_t word);
 
 uint64_t load_instruction(uint64_t caddr);
 void     store_instruction(uint64_t caddr, uint64_t instruction);
+
+uint64_t load_code(uint64_t caddr);
 
 uint64_t load_data(uint64_t daddr);
 void     store_data(uint64_t daddr, uint64_t data);
@@ -1059,6 +1076,9 @@ void selfie_load();
 
 // page-aligned ELF header size for storing file header, program header, code size
 uint64_t ELF_HEADER_SIZE = 4096;
+
+uint64_t ELFCLASS64 = 2;
+uint64_t ELFCLASS32 = 1;
 
 uint64_t MAX_CODE_SIZE = 262144; // 256KB
 uint64_t MAX_DATA_SIZE = 65536;  // 64KB
@@ -1151,6 +1171,21 @@ uint64_t* code_line_number = (uint64_t*) 0; // code line number per emitted inst
 uint64_t* data_line_number = (uint64_t*) 0; // data line number per emitted data word
 
 // ------------------------- INITIALIZATION ------------------------
+
+void reset_binary() {
+  ELF_header = (uint64_t*) 0;
+
+  code_binary = (uint64_t*) 0;
+  code_start  = 0;
+  code_size   = 0;
+
+  data_binary = (uint64_t*) 0;
+  data_start  = 0;
+  data_size   = 0;
+
+  code_line_number = (uint64_t*) 0;
+  data_line_number = (uint64_t*) 0;
+}
 
 void reset_instruction_counters() {
   ic_lui   = 0;
@@ -1570,12 +1605,10 @@ void gc_collect(uint64_t* context);
 
 void print_gc_profile(uint64_t* context);
 
-void gc_arguments();
-
 // ----------------------- LIBRARY FUNCTIONS -----------------------
 
 uint64_t* gc_malloc(uint64_t size) {
-    return gc_malloc_implementation((uint64_t*) 0, size);
+  return gc_malloc_implementation((uint64_t*) 0, size);
 }
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
@@ -1592,6 +1625,8 @@ uint64_t GC_PERIOD = 1000; // gc every so often
 uint64_t GC_REUSE = 1; // reuse memory with freelist by default
 
 uint64_t GC_METADATA_SIZE = 32; // SIZEOFUINT64 * 2 + SIZEOFUINT64STAR * 2
+
+uint64_t GC_WORDSIZE = 8; // SIZEOFUINT64 for library variant, otherwise WORDSIZE
 
 uint64_t GC_MARKBIT_UNREACHABLE = 0; // indicating that an object is not reachable
 uint64_t GC_MARKBIT_REACHABLE   = 1; // indicating that an object is reachable by root or other reachable object
@@ -1699,7 +1734,7 @@ void     undo_ecall();
 
 uint64_t print_data_line_number();
 uint64_t print_data_context();
-uint64_t print_data(uint64_t data);
+uint64_t print_data();
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -1727,6 +1762,7 @@ uint64_t* MNEMONICS; // assembly mnemonics of instructions
 // -----------------------------------------------------------------
 
 void init_disassembler();
+void reset_disassembler();
 
 char* get_mnemonic(uint64_t ins);
 
@@ -1752,17 +1788,23 @@ void init_disassembler() {
   *(MNEMONICS + DIVU)  = (uint64_t) "divu";
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
-  if (IS64BITSYSTEM) {
+
+  reset_disassembler();
+
+  *(MNEMONICS + BEQ)   = (uint64_t) "beq";
+  *(MNEMONICS + JAL)   = (uint64_t) "jal";
+  *(MNEMONICS + JALR)  = (uint64_t) "jalr";
+  *(MNEMONICS + ECALL) = (uint64_t) "ecall";
+}
+
+void reset_disassembler() {
+  if (IS64BITTARGET) {
     *(MNEMONICS + LOAD)  = (uint64_t) "ld";
     *(MNEMONICS + STORE) = (uint64_t) "sd";
   } else {
     *(MNEMONICS + LOAD)  = (uint64_t) "lw";
     *(MNEMONICS + STORE) = (uint64_t) "sw";
   }
-  *(MNEMONICS + BEQ)   = (uint64_t) "beq";
-  *(MNEMONICS + JAL)   = (uint64_t) "jal";
-  *(MNEMONICS + JALR)  = (uint64_t) "jalr";
-  *(MNEMONICS + ECALL) = (uint64_t) "ecall";
 }
 
 // -----------------------------------------------------------------
@@ -1856,6 +1898,7 @@ uint64_t EXCEPTION_DIVISIONBYZERO        = 5;
 uint64_t EXCEPTION_INVALIDADDRESS        = 6;
 uint64_t EXCEPTION_UNKNOWNINSTRUCTION    = 7;
 uint64_t EXCEPTION_UNINITIALIZEDREGISTER = 8;
+uint64_t EXCEPTION_INTEGEROVERFLOW       = 9;
 
 uint64_t* EXCEPTIONS; // textual representation of exceptions
 
@@ -1955,7 +1998,7 @@ uint64_t heap_writes = 0;
 // ------------------------- INITIALIZATION ------------------------
 
 void init_interpreter() {
-  EXCEPTIONS = smalloc((EXCEPTION_UNINITIALIZEDREGISTER + 1) * SIZEOFUINT64STAR);
+  EXCEPTIONS = smalloc((EXCEPTION_INTEGEROVERFLOW + 1) * SIZEOFUINT64STAR);
 
   *(EXCEPTIONS + EXCEPTION_NOEXCEPTION)           = (uint64_t) "no exception";
   *(EXCEPTIONS + EXCEPTION_PAGEFAULT)             = (uint64_t) "page fault";
@@ -1966,6 +2009,7 @@ void init_interpreter() {
   *(EXCEPTIONS + EXCEPTION_INVALIDADDRESS)        = (uint64_t) "invalid address";
   *(EXCEPTIONS + EXCEPTION_UNKNOWNINSTRUCTION)    = (uint64_t) "unknown instruction";
   *(EXCEPTIONS + EXCEPTION_UNINITIALIZEDREGISTER) = (uint64_t) "uninitialized register";
+  *(EXCEPTIONS + EXCEPTION_INTEGEROVERFLOW)       = (uint64_t) "integer overflow";
 }
 
 void reset_interpreter() {
@@ -2012,6 +2056,9 @@ void reset_source_profile() {
 void reset_register_access_counters() {
   reads_per_register  = zmalloc(NUMBEROFREGISTERS * SIZEOFUINT64);
   writes_per_register = zmalloc(NUMBEROFREGISTERS * SIZEOFUINT64);
+
+  // zero register is initialized by definition
+  *(writes_per_register + REG_ZR) = 1;
 
   // stack and frame pointer registers are initialized by boot loader
   *(writes_per_register + REG_SP) = 1;
@@ -2353,8 +2400,11 @@ char* argument = (char*) 0;
 void init_selfie(uint64_t argc, uint64_t* argv);
 
 void init_system();
+void init_target();
 
 void turn_on_gc_library(uint64_t period, char* name);
+
+void experimental_features();
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -2392,15 +2442,7 @@ void init_system() {
   if (SIZEOFUINT64INBITS != 64) {
     if (SIZEOFUINT64INBITS == 32) {
       IS64BITSYSTEM = 0;
-
-      // configuring ELF32 file header
-
-      EI_CLASS = 1; // file class is 1 (ELFCLASS32)
-
-      e_phoff = 52; // program header offset 0x34 (ELFCLASS32)
-
-      e_ehsize    = 52; // elf header size 52 bytes (ELFCLASS32)
-      e_phentsize = 32; // size of program header entry 32 bytes (ELFCLASS32)
+      IS64BITTARGET = 0;
     } else
       // selfie only supports 32-bit and 64-bit systems
       exit(EXITCODE_SYSTEMERROR);
@@ -2434,6 +2476,56 @@ void init_system() {
   else
     // Linux file opening flags are the default for Linux, selfie, and bare-metal hosts
     O_CREAT_TRUNC_WRONLY = LINUX_O_CREAT_TRUNC_WRONLY;
+}
+
+void init_target() {
+  if (IS64BITTARGET) {
+    if (IS64BITSYSTEM) {
+      SIZEOFUINT = SIZEOFUINT64;
+      UINT_MAX   = UINT64_MAX;
+
+      WORDSIZE       = SIZEOFUINT64;
+      WORDSIZEINBITS = WORDSIZE * 8;
+
+      MAX_INTEGER_LENGTH = 20; // 2^64-1 requires 20 decimal digits
+
+      // configuring ELF64 file header
+
+      EI_CLASS = ELFCLASS64; // file class is 2 (ELFCLASS64)
+
+      e_phoff = 64; // program header offset 0x40 (ELFCLASS64)
+
+      e_ehsize    = 64; // elf header size 64 bytes (ELFCLASS64)
+      e_phentsize = 56; // size of program header entry 56 bytes (ELFCLASS64)
+    } else
+      // selfie does not support 64-bit targets on 32-bit systems
+      exit(EXITCODE_SYSTEMERROR);
+  } else {
+    if (IS64BITSYSTEM) {
+      SIZEOFUINT = SINGLEWORDSIZE;
+      UINT_MAX   = two_to_the_power_of(SINGLEWORDSIZEINBITS) - 1;
+
+      WORDSIZE       = SINGLEWORDSIZE;
+      WORDSIZEINBITS = WORDSIZE * 8;
+    } else {
+      SIZEOFUINT = SIZEOFUINT64;
+      UINT_MAX   = UINT64_MAX;
+
+      WORDSIZE       = SIZEOFUINT64;
+      WORDSIZEINBITS = WORDSIZE * 8;
+    }
+
+    MAX_INTEGER_LENGTH = 10; // 2^32-1 requires 10 decimal digits
+
+    // configuring ELF32 file header
+
+    EI_CLASS = ELFCLASS32; // file class is 1 (ELFCLASS32)
+
+    e_phoff = 52; // program header offset 0x34 (ELFCLASS32)
+
+    e_ehsize    = 52; // elf header size 52 bytes (ELFCLASS32)
+    e_phentsize = 32; // size of program header entry 32 bytes (ELFCLASS32)
+  }
 }
 
 void turn_on_gc_library(uint64_t period, char* name) {
@@ -2556,27 +2648,26 @@ uint64_t signed_division(uint64_t a, uint64_t b) {
 uint64_t is_signed_integer(uint64_t n, uint64_t b) {
   // assert: 0 < b <= SIZEOFUINT64INBITS
   if (n < two_to_the_power_of(b - 1))
-    // assert: 0 <= n < 2^(b - 1)
     return 1;
   else if (n >= -two_to_the_power_of(b - 1))
-    // assert: -2^(b - 1) <= n < 2^64
     return 1;
   else
     return 0;
 }
 
 uint64_t sign_extend(uint64_t n, uint64_t b) {
-  // assert: 0 <= n <= 2^b
-  // assert: 0 < b < SIZEOFUINT64INBITS
+  // assert: -2^(b - 1) <= n < 2^(b - 1)
+  // assert: 0 < b <= SIZEOFUINT64INBITS
   if (n < two_to_the_power_of(b - 1))
     return n;
-  else
+  else if (b < SIZEOFUINT64INBITS)
     return n - two_to_the_power_of(b);
+  else
+    return n;
 }
 
 uint64_t sign_shrink(uint64_t n, uint64_t b) {
-  // assert: -2^(b - 1) <= n < 2^(b - 1)
-  // assert: 0 < b < SIZEOFUINT64INBITS
+  // assert: 0 < b <= SIZEOFUINT64INBITS
   return get_bits(n, 0, b);
 }
 
@@ -2755,19 +2846,19 @@ uint64_t atoi(char* s) {
     // assert: s contains a decimal number
 
     // use base 10 but detect wrap around
-    if (n < UINT64_MAX / 10)
+    if (n < UINT_MAX / 10)
       n = n * 10 + c;
-    else if (n == UINT64_MAX / 10)
-      if (c <= UINT64_MAX % 10)
+    else if (n == UINT_MAX / 10)
+      if (c <= UINT_MAX % 10)
         n = n * 10 + c;
       else {
-        // s contains a decimal number larger than UINT64_MAX
+        // s contains a decimal number larger than UINT_MAX
         printf("%s: cannot convert out-of-bound number %s\n", selfie_name, s);
 
         exit(EXITCODE_SCANNERERROR);
       }
     else {
-      // s contains a decimal number larger than UINT64_MAX
+      // s contains a decimal number larger than UINT_MAX
       printf("%s: cannot convert out-of-bound number %s\n", selfie_name, s);
 
       exit(EXITCODE_SCANNERERROR);
@@ -3211,7 +3302,7 @@ uint64_t selfie_dprintf(uint64_t fd, char* format, ...) {
 char* remove_prefix_from_printf_procedures(char* procedure) {
   // for bootstrapping remove prefix from selfie *printf procedures
   if (string_compare(procedure, "selfie_printf"))
-    // length of string literal must be multiple of WORDSIZE;
+    // length of string literal must be multiple of SIZEOFUINT64;
     // trailing spaces are removed by string_shrink resulting
     // in unique hash for global symbol table
     return string_shrink("printf ");
@@ -4833,15 +4924,15 @@ uint64_t compile_simple_expression() {
       if (ltype == UINT64STAR_T) {
         if (rtype == UINT64_T)
           // UINT64STAR_T + UINT64_T
-          // pointer arithmetic: left_term + right_term * SIZEOFUINT64
-          emit_multiply_by(current_temporary(), SIZEOFUINT64);
+          // pointer arithmetic: left_term + right_term * SIZEOFUINT
+          emit_multiply_by(current_temporary(), SIZEOFUINT);
         else
           // UINT64STAR_T + UINT64STAR_T
           syntax_error_message("(uint64_t*) + (uint64_t*) is undefined");
       } else if (rtype == UINT64STAR_T) {
         // UINT64_T + UINT64STAR_T
-        // pointer arithmetic: left_term * SIZEOFUINT64 + right_term
-        emit_multiply_by(previous_temporary(), SIZEOFUINT64);
+        // pointer arithmetic: left_term * SIZEOFUINT + right_term
+        emit_multiply_by(previous_temporary(), SIZEOFUINT);
 
         ltype = UINT64STAR_T;
       }
@@ -4852,14 +4943,14 @@ uint64_t compile_simple_expression() {
       if (ltype == UINT64STAR_T) {
         if (rtype == UINT64_T) {
           // UINT64STAR_T - UINT64_T
-          // pointer arithmetic: left_term - right_term * SIZEOFUINT64
-          emit_multiply_by(current_temporary(), SIZEOFUINT64);
+          // pointer arithmetic: left_term - right_term * SIZEOFUINT
+          emit_multiply_by(current_temporary(), SIZEOFUINT);
           emit_sub(previous_temporary(), previous_temporary(), current_temporary());
         } else {
           // UINT64STAR_T - UINT64STAR_T
-          // pointer arithmetic: (left_term - right_term) / SIZEOFUINT64
+          // pointer arithmetic: (left_term - right_term) / SIZEOFUINT
           emit_sub(previous_temporary(), previous_temporary(), current_temporary());
-          emit_addi(current_temporary(), REG_ZR, SIZEOFUINT64);
+          emit_addi(current_temporary(), REG_ZR, SIZEOFUINT);
           emit_divu(previous_temporary(), previous_temporary(), current_temporary());
 
           ltype = UINT64_T;
@@ -5447,7 +5538,7 @@ void compile_procedure(char* procedure, uint64_t type) {
 
       number_of_parameters = 1;
 
-      // 2 * WORDIZE offset to skip frame pointer and link
+      // 2 * WORDSIZE offset to skip frame pointer and link
       // additional offset (number_of_parameters - 1) * WORDSIZE
       // since actual parameters are pushed onto stack in reverse
       set_address(entry, 2 * WORDSIZE + (number_of_parameters - 1) * WORDSIZE);
@@ -5711,7 +5802,8 @@ void macro_var_start() {
 
         load_integer(s0_offset);
 
-        // address of first variadic parameter is S0 + 2 * WORDSIZE + #non-variadic parameters * WORDSIZE
+        // address of first variadic parameter is:
+        // S0 + 2 * WORDSIZE + #non-variadic parameters * WORDSIZE
         emit_add(current_temporary(), current_temporary(), REG_S0);
 
         // store address in variable passed as macro argument
@@ -5755,7 +5847,7 @@ void macro_var_arg() {
         // store variadic parameter as return value of macro
         emit_load(REG_A0, current_temporary(), 0);
 
-        // increment var_list_variable pointer by one parameter size (=WORDSIZE)
+        // increment var_list_variable pointer by one parameter size (WORDSIZE)
         emit_addi(current_temporary(), current_temporary(), WORDSIZE);
 
         // store incremented address in variable passed as macro argument
@@ -5844,7 +5936,7 @@ void emit_bootstrapping() {
   // code segment starts at PK_CODE_START
   code_start = PK_CODE_START;
 
-  // code size must be word-aligned
+  // code size must be memory-word-aligned
   if (code_size % WORDSIZE != 0)
     emit_nop();
 
@@ -5889,7 +5981,7 @@ void emit_bootstrapping() {
     emit_addi(REG_A7, REG_ZR, SYSCALL_BRK);
     emit_ecall();
 
-    // word-align current program break
+    // memory-word-align current program break
     emit_round_up(REG_A0, WORDSIZE);
 
     // set program break to word-aligned program break
@@ -5921,7 +6013,7 @@ void emit_bootstrapping() {
     emit_addi(REG_SP, REG_SP, -WORDSIZE);
     emit_store(REG_SP, 0, current_temporary());
 
-    //   sp  sp+WORDSIZE  sp+2*WORDSIZE
+    //   sp  sp+TRGTWRDSZ sp+2*WORDSIZE
     //    |      |        |
     //    V      V        V
     // | argc | argc | argv[0] | argv[1] | ... | argv[n]
@@ -5984,13 +6076,11 @@ void selfie_compile() {
 
   binary_name = source_name;
 
-  // allocate memory for storing binary
+  reset_binary();
+
+  // allocate zeroed memory for storing binary
   code_binary = zmalloc(MAX_CODE_SIZE);
-  code_start  = 0;
-  code_size   = 0;
   data_binary = zmalloc(MAX_DATA_SIZE);
-  data_start  = 0;
-  data_size   = 0;
 
   // allocate zeroed memory for storing source code line numbers
   code_line_number = zmalloc(MAX_CODE_SIZE / INSTRUCTIONSIZE * SIZEOFUINT64);
@@ -6041,7 +6131,8 @@ void selfie_compile() {
 
       number_of_source_files = number_of_source_files + 1;
 
-      printf("%s: selfie compiling %s with starc\n", selfie_name, source_name);
+      printf("%s: selfie compiling %s to %lu-bit RISC-U with %lu-bit starc\n", selfie_name,
+        source_name, WORDSIZEINBITS, SIZEOFUINT64INBITS);
 
       // assert: source_name is mapped and not longer than MAX_FILENAME_LENGTH
 
@@ -6171,34 +6262,44 @@ uint64_t is_temporary_register(uint64_t reg) {
     return 0;
 }
 
-uint64_t read_register(uint64_t reg) {
-  if (reg != REG_ZR) {
-    if (*(writes_per_register + reg) > 0)
-      // register has been written to before
-      *(reads_per_register + reg) = *(reads_per_register + reg) + 1;
-    else {
-      print_instruction();
-      print(": reading from uninitialized register ");
-      print_register_name(reg);
-      println();
+void read_register_wrap(uint64_t reg, uint64_t wrap) {
+  if (*(writes_per_register + reg) > 0) {
+    // register has been written to before
+    *(reads_per_register + reg) = *(reads_per_register + reg) + 1;
 
-      throw_exception(EXCEPTION_UNINITIALIZEDREGISTER, reg);
+    // tolerate unwrapped values in register-to-register transfers
+    if (wrap)
+      if (*(registers + reg) > UINT_MAX) {
+        print_instruction();
+        print(": reading unwrapped value from register ");
+        print_register_name(reg);
+        println();
 
-      return 0;
-    }
+        throw_exception(EXCEPTION_INTEGEROVERFLOW, reg);
+      }
+  } else {
+    print_instruction();
+    print(": reading from uninitialized register ");
+    print_register_name(reg);
+    println();
+
+    throw_exception(EXCEPTION_UNINITIALIZEDREGISTER, reg);
   }
-
-  return 1;
 }
 
-void write_register(uint64_t reg) {
+void read_register(uint64_t reg) {
+  read_register_wrap(reg, 1);
+}
+
+void write_register_wrap(uint64_t reg, uint64_t wrap) {
+  if (wrap)
+    *(registers + reg) = sign_shrink(*(registers + reg), WORDSIZEINBITS);
+
   *(writes_per_register + reg) = *(writes_per_register + reg) + 1;
 }
 
-void update_register_counters() {
-  if (read_register(rs1))
-    if (read_register(rs2))
-      write_register(rd);
+void write_register(uint64_t reg) {
+  write_register_wrap(reg, 1);
 }
 
 // -----------------------------------------------------------------
@@ -6572,50 +6673,69 @@ void print_instruction_counters() {
   println();
 }
 
-uint64_t get_low_instruction(uint64_t word) {
-  return get_bits(word, 0, INSTRUCTIONSIZEINBITS);
+uint64_t get_low_word(uint64_t word) {
+  return get_bits(word, 0, SINGLEWORDSIZEINBITS);
 }
 
-uint64_t get_high_instruction(uint64_t word) {
-  return get_bits(word, INSTRUCTIONSIZEINBITS, INSTRUCTIONSIZEINBITS);
+uint64_t get_high_word(uint64_t word) {
+  return get_bits(word, SINGLEWORDSIZEINBITS, SINGLEWORDSIZEINBITS);
 }
 
-uint64_t load_code(uint64_t caddr) {
-  return *(code_binary + caddr / WORDSIZE);
+uint64_t load_word(uint64_t* memory, uint64_t waddr, uint64_t is_double_word) {
+  if (IS64BITSYSTEM) {
+    if (IS64BITTARGET)
+      if (is_double_word)
+        return *(memory + waddr / SIZEOFUINT64);
+
+    if (waddr % SIZEOFUINT64 == 0)
+      return get_low_word(*(memory + waddr / SIZEOFUINT64));
+    else
+      return get_high_word(*(memory + waddr / SIZEOFUINT64));
+  } else
+    return *(memory + waddr / SIZEOFUINT64);
 }
 
-void store_code(uint64_t caddr, uint64_t code) {
+void store_word(uint64_t* memory, uint64_t waddr, uint64_t is_double_word, uint64_t word) {
+  if (IS64BITSYSTEM) {
+    if (IS64BITTARGET)
+      if (is_double_word) {
+        *(memory + waddr / SIZEOFUINT64) = word;
+
+        return;
+      }
+
+    if (waddr % SIZEOFUINT64 == 0)
+      // replace low word
+      *(memory + waddr / SIZEOFUINT64) =
+        left_shift(load_word(memory, waddr + SINGLEWORDSIZE, is_double_word), SINGLEWORDSIZEINBITS) + word;
+    else
+      // replace high word
+      *(memory + waddr / SIZEOFUINT64) =
+        left_shift(word, SINGLEWORDSIZEINBITS) + load_word(memory, waddr - SINGLEWORDSIZE, is_double_word);
+  } else
+    *(memory + waddr / SIZEOFUINT64) = word;
+}
+
+uint64_t load_instruction(uint64_t caddr) {
+  return load_word(code_binary, caddr, 0);
+}
+
+void store_instruction(uint64_t caddr, uint64_t instruction) {
   if (caddr >= MAX_CODE_SIZE) {
     syntax_error_message("maximum code size exceeded");
 
     exit(EXITCODE_COMPILERERROR);
   }
 
-  *(code_binary + caddr / WORDSIZE) = code;
+  store_word(code_binary, caddr, 0, instruction);
 }
 
-uint64_t load_instruction(uint64_t caddr) {
-  if (caddr % WORDSIZE == 0)
-    return get_low_instruction(load_code(caddr));
-  else
-    return get_high_instruction(load_code(caddr));
-}
-
-void store_instruction(uint64_t caddr, uint64_t instruction) {
-  if (INSTRUCTIONSIZE == WORDSIZE)
-    store_code(caddr, instruction);
-  else if (caddr % WORDSIZE == 0)
-    // replace low word
-    store_code(caddr,
-      left_shift(load_instruction(caddr + INSTRUCTIONSIZE), INSTRUCTIONSIZEINBITS) + instruction);
-  else
-    // replace high word
-    store_code(caddr,
-      left_shift(instruction, INSTRUCTIONSIZEINBITS) + load_instruction(caddr - INSTRUCTIONSIZE));
+uint64_t load_code(uint64_t caddr) {
+  return load_word(code_binary, caddr, 1);
 }
 
 uint64_t load_data(uint64_t daddr) {
-  return *(data_binary + daddr / WORDSIZE);
+  return load_word(data_binary, daddr, 1);
 }
 
 void store_data(uint64_t daddr, uint64_t data) {
@@ -6625,7 +6745,7 @@ void store_data(uint64_t daddr, uint64_t data) {
     exit(EXITCODE_COMPILERERROR);
   }
 
-  *(data_binary + daddr / WORDSIZE) = data;
+  store_word(data_binary, daddr, 1, data);
 }
 
 void emit_instruction(uint64_t instruction) {
@@ -6697,7 +6817,7 @@ void emit_sltu(uint64_t rd, uint64_t rs1, uint64_t rs2) {
 }
 
 void emit_load(uint64_t rd, uint64_t rs1, uint64_t immediate) {
-  if (IS64BITSYSTEM)
+  if (IS64BITTARGET)
     emit_instruction(encode_i_format(immediate, rs1, F3_LD, rd, OP_LOAD));
   else
     emit_instruction(encode_i_format(immediate, rs1, F3_LW, rd, OP_LOAD));
@@ -6706,7 +6826,7 @@ void emit_load(uint64_t rd, uint64_t rs1, uint64_t immediate) {
 }
 
 void emit_store(uint64_t rs1, uint64_t immediate, uint64_t rs2) {
-  if (IS64BITSYSTEM)
+  if (IS64BITTARGET)
     emit_instruction(encode_s_format(immediate, rs2, rs1, F3_SD, OP_STORE));
   else
     emit_instruction(encode_s_format(immediate, rs2, rs1, F3_SW, OP_STORE));
@@ -6808,11 +6928,7 @@ void emit_string_data(uint64_t* entry) {
   l = round_up(string_length(s) + 1, WORDSIZE);
 
   while (i < l) {
-    // CAUTION: at boot levels higher than 0, s is only accessible
-    // in C* at word granularity, not individual characters
-    emit_data_word(*((uint64_t*) s), get_address(entry) + i, get_line_number(entry));
-
-    s = (char*) ((uint64_t*) s + 1);
+    emit_data_word(load_word((uint64_t*) s, i, 1), get_address(entry) + i, get_line_number(entry));
 
     i = i + WORDSIZE;
   }
@@ -6856,51 +6972,40 @@ uint64_t* encode_elf_header() {
 
   // store all data necessary for creating a minimal and valid file and program header
 
-  if (IS64BITSYSTEM) {
+  store_word(header, 0, 0, EI_MAG0
+              + left_shift(EI_MAG1, 8)
+              + left_shift(EI_MAG2, 16)
+              + left_shift(EI_MAG3, 24));
+  store_word(header, 4, 0, EI_CLASS
+              + left_shift(EI_DATA, 8)
+              + left_shift(EI_VERSION, 16)
+              + left_shift(EI_OSABI, 24));
+  store_word(header, 8, 0, EI_ABIVERSION); // ignoring 24 LSBs of EI_PAD
+  store_word(header, 12, 0, EI_PAD);       // ignoring 24 MSBs of EI_PAD
+  store_word(header, 16, 0, e_type + left_shift(e_machine, 16));
+  store_word(header, 20, 0, e_version);
+
+  if (EI_CLASS == ELFCLASS64) {
     // RISC-U ELF64 file header
-    *(header + 0) = EI_MAG0
-                  + left_shift(EI_MAG1, 8)
-                  + left_shift(EI_MAG2, 16)
-                  + left_shift(EI_MAG3, 24)
-                  + left_shift(EI_CLASS, 32)
-                  + left_shift(EI_DATA, 40)
-                  + left_shift(EI_VERSION, 48)
-                  + left_shift(EI_OSABI, 56);
-    *(header + 1) = EI_ABIVERSION + left_shift(EI_PAD, 8);
-    *(header + 2) = e_type
-                  + left_shift(e_machine, 16)
-                  + left_shift(e_version, 32);
-    *(header + 3) = e_entry;
-    *(header + 4) = e_phoff;
-    *(header + 5) = e_shoff;
-    *(header + 6) = e_flags
-                  + left_shift(e_ehsize, 32)
-                  + left_shift(e_phentsize, 48);
-    *(header + 7) = e_phnum
-                  + left_shift(e_shentsize, 16)
-                  + left_shift(e_shnum, 32)
-                  + left_shift(e_shstrndx, 48);
+    store_word(header, 24, 1, e_entry);
+    store_word(header, 32, 1, e_phoff);
+    store_word(header, 40, 1, e_shoff);
+    store_word(header, 48, 1, e_flags
+                + left_shift(e_ehsize, 32)
+                + left_shift(e_phentsize, 48));
+    store_word(header, 56, 1, e_phnum
+                + left_shift(e_shentsize, 16)
+                + left_shift(e_shnum, 32)
+                + left_shift(e_shstrndx, 48));
   } else {
     // RISC-U ELF32 file header
-    *(header + 0)  = EI_MAG0
-                   + left_shift(EI_MAG1, 8)
-                   + left_shift(EI_MAG2, 16)
-                   + left_shift(EI_MAG3, 24);
-    *(header + 1)  = EI_CLASS
-                   + left_shift(EI_DATA, 8)
-                   + left_shift(EI_VERSION, 16)
-                   + left_shift(EI_OSABI, 24);
-    *(header + 2)  = EI_ABIVERSION; // ignoring 24 LSBs of EI_PAD
-    *(header + 3)  = EI_PAD;        // ignoring 24 MSBs of EI_PAD
-    *(header + 4)  = e_type + left_shift(e_machine, 16);
-    *(header + 5)  = e_version;
-    *(header + 6)  = e_entry;
-    *(header + 7)  = e_phoff;
-    *(header + 8)  = e_shoff;
-    *(header + 9)  = e_flags;
-    *(header + 10) = e_ehsize + left_shift(e_phentsize, 16);
-    *(header + 11) = e_phnum + left_shift(e_shentsize, 16);
-    *(header + 12) = e_shnum + left_shift(e_shstrndx, 16);
+    store_word(header, 24, 0, e_entry);
+    store_word(header, 28, 0, e_phoff);
+    store_word(header, 32, 0, e_shoff);
+    store_word(header, 36, 0, e_flags);
+    store_word(header, 40, 0, e_ehsize + left_shift(e_phentsize, 16));
+    store_word(header, 44, 0, e_phnum + left_shift(e_shentsize, 16));
+    store_word(header, 48, 0, e_shnum + left_shift(e_shstrndx, 16));
   }
 
   // start of segments have to be aligned in the binary file
@@ -6926,8 +7031,17 @@ uint64_t* encode_elf_header() {
   return header;
 }
 
+void decode_elf_header(uint64_t* header) {
+  EI_CLASS = get_bits(load_word(header, 4, 0), 0, 8);
+
+  if (EI_CLASS == ELFCLASS64)
+    IS64BITTARGET = 1;
+  else
+    IS64BITTARGET = 0;
+}
+
 uint64_t get_elf_program_header_offset(uint64_t ph_index) {
-  return (e_ehsize + e_phentsize * ph_index) / SIZEOFUINT64;
+  return e_ehsize + e_phentsize * ph_index;
 }
 
 void encode_elf_program_header(uint64_t* header, uint64_t ph_index) {
@@ -6935,35 +7049,40 @@ void encode_elf_program_header(uint64_t* header, uint64_t ph_index) {
 
   ph_offset = get_elf_program_header_offset(ph_index);
 
-  if (IS64BITSYSTEM) {
+  if (EI_CLASS == ELFCLASS64) {
     // RISC-U ELF64 program header
-    *(header + ph_offset + 0) = p_type + left_shift(p_flags, 32);
-    *(header + ph_offset + 1) = p_offset;
-    *(header + ph_offset + 2) = p_vaddr;
-    *(header + ph_offset + 3) = p_paddr;
-    *(header + ph_offset + 4) = p_filesz;
-    *(header + ph_offset + 5) = p_memsz;
-    *(header + ph_offset + 6) = p_align;
+    store_word(header, ph_offset + 0, 1, p_type + left_shift(p_flags, 32));
+    store_word(header, ph_offset + 8, 1, p_offset);
+    store_word(header, ph_offset + 16, 1, p_vaddr);
+    store_word(header, ph_offset + 24, 1, p_paddr);
+    store_word(header, ph_offset + 32, 1, p_filesz);
+    store_word(header, ph_offset + 40, 1, p_memsz);
+    store_word(header, ph_offset + 48, 1, p_align);
   } else {
     // RISC-U ELF32 program header
-    *(header + ph_offset + 0) = p_type;
-    *(header + ph_offset + 1) = p_offset;
-    *(header + ph_offset + 2) = p_vaddr;
-    *(header + ph_offset + 3) = p_paddr;
-    *(header + ph_offset + 4) = p_filesz;
-    *(header + ph_offset + 5) = p_memsz;
-    *(header + ph_offset + 6) = p_flags;
-    *(header + ph_offset + 7) = p_align;
+    store_word(header, ph_offset + 0, 0, p_type);
+    store_word(header, ph_offset + 4, 0, p_offset);
+    store_word(header, ph_offset + 8, 0, p_vaddr);
+    store_word(header, ph_offset + 12, 0, p_paddr);
+    store_word(header, ph_offset + 16, 0, p_filesz);
+    store_word(header, ph_offset + 20, 0, p_memsz);
+    store_word(header, ph_offset + 24, 0, p_flags);
+    store_word(header, ph_offset + 28, 0, p_align);
   }
 }
 
 void decode_elf_program_header(uint64_t* header, uint64_t ph_index) {
-  p_filesz = *(header + get_elf_program_header_offset(ph_index) + 4);
+  if (EI_CLASS == ELFCLASS64)
+    p_filesz = load_word(header, get_elf_program_header_offset(ph_index) + 32, 1);
+  else
+    p_filesz = load_word(header, get_elf_program_header_offset(ph_index) + 16, 0);
 }
 
 uint64_t validate_elf_header(uint64_t* header) {
   uint64_t* valid_header;
   uint64_t i;
+
+  decode_elf_header(header);
 
   // must match binary bootstrapping
   code_start = PK_CODE_START;
@@ -7056,9 +7175,10 @@ void selfie_output(char* filename) {
     exit(EXITCODE_IOERROR);
   }
 
-  printf("%s: %lu bytes with %lu instructions and %lu bytes of data written into %s\n", selfie_name,
+  printf("%s: %lu bytes with %lu %lu-bit RISC-U instructions and %lu bytes of data written into %s\n", selfie_name,
     ELF_HEADER_SIZE + code_size + data_size,
     code_size / INSTRUCTIONSIZE,
+    WORDSIZEINBITS,
     data_size,
     binary_name);
 }
@@ -7112,25 +7232,24 @@ void selfie_load() {
     exit(EXITCODE_IOERROR);
   }
 
+  // no source line numbers in binaries
+  reset_binary();
+
   // this call makes sure ELF_header is mapped for reading into it
   ELF_header = allocate_elf_header();
 
   // make sure code and data binaries are also mapped for reading into them
   code_binary = touch(smalloc(MAX_CODE_SIZE), MAX_CODE_SIZE);
-  code_start  = 0;
-  code_size   = 0;
   data_binary = touch(smalloc(MAX_DATA_SIZE), MAX_DATA_SIZE);
-  data_start  = 0;
-  data_size   = 0;
-
-  // no source line numbers in binaries
-  code_line_number = (uint64_t*) 0;
-  data_line_number = (uint64_t*) 0;
 
   number_of_read_bytes = read(fd, ELF_header, ELF_HEADER_SIZE);
 
   if (number_of_read_bytes == ELF_HEADER_SIZE) {
     if (validate_elf_header(ELF_header)) {
+      init_target();
+
+      reset_disassembler();
+
       code_size_with_padding = round_up(code_size, p_align);
 
       number_of_read_bytes = sign_extend(read(fd, code_binary, code_size_with_padding), SYSCALL_BITWIDTH);
@@ -7141,10 +7260,11 @@ void selfie_load() {
         if (number_of_read_bytes == data_size) {
           // check if we are really at EOF
           if (read(fd, binary_buffer, SIZEOFUINT64) == 0) {
-            printf("%s: %lu bytes with %lu instructions and %lu bytes of data loaded from %s\n",
+            printf("%s: %lu bytes with %lu %lu-bit RISC-U instructions and %lu bytes of data loaded from %s\n",
               selfie_name,
               ELF_HEADER_SIZE + code_size + data_size,
               code_size / INSTRUCTIONSIZE,
+              WORDSIZEINBITS,
               data_size,
               binary_name);
 
@@ -7257,7 +7377,7 @@ void implement_read(uint64_t* context) {
 
   read_total = 0;
 
-  bytes_to_read = SIZEOFUINT64;
+  bytes_to_read = WORDSIZE;
 
   failed = 0;
 
@@ -7278,7 +7398,7 @@ void implement_read(uint64_t* context) {
             size = size - actually_read;
 
             if (size > 0)
-              vbuffer = vbuffer + SIZEOFUINT64;
+              vbuffer = vbuffer + WORDSIZE;
           } else {
             if (signed_less_than(0, actually_read))
               read_total = read_total + actually_read;
@@ -7380,7 +7500,7 @@ void implement_write(uint64_t* context) {
 
   written_total = 0;
 
-  bytes_to_write = SIZEOFUINT64;
+  bytes_to_write = WORDSIZE;
 
   failed = 0;
 
@@ -7401,7 +7521,7 @@ void implement_write(uint64_t* context) {
             size = size - actually_written;
 
             if (size > 0)
-              vbuffer = vbuffer + SIZEOFUINT64;
+              vbuffer = vbuffer + WORDSIZE;
           } else {
             if (signed_less_than(0, actually_written))
               written_total = written_total + actually_written;
@@ -7476,32 +7596,33 @@ uint64_t down_load_string(uint64_t* context, uint64_t vaddr, char* s) {
 
   i = 0;
 
-  while (i < MAX_FILENAME_LENGTH / SIZEOFUINT64) {
+  while (i < MAX_FILENAME_LENGTH) {
     if (is_virtual_address_valid(vaddr, WORDSIZE))
       if (is_data_stack_heap_address(context, vaddr)) {
         if (is_virtual_address_mapped(get_pt(context), vaddr))
-          *((uint64_t*) s + i) = load_virtual_memory(get_pt(context), vaddr);
+          store_word((uint64_t*) s, i, 1, load_virtual_memory(get_pt(context), vaddr));
         else {
           printf("%s: opening file failed because the file name address 0x%08lX is unmapped\n", selfie_name, (uint64_t) vaddr);
 
           return 0;
         }
 
-        j = 0;
+        // WORDSIZE may be less than SIZEOFUINT64
+        j = i % SIZEOFUINT64;
 
         // check if string ends in the current word
-        while (j < SIZEOFUINT64) {
-          if (load_character((char*) ((uint64_t*) s + i), j) == 0)
+        while (j - i % SIZEOFUINT64 < WORDSIZE) {
+          if (load_character((char*) ((uint64_t*) s + i / SIZEOFUINT64), j) == 0)
             return 1;
 
           j = j + 1;
         }
 
         // advance to the next word in virtual memory
-        vaddr = vaddr + SIZEOFUINT64;
+        vaddr = vaddr + WORDSIZE;
 
-        // advance to the next word in our memory
-        i = i + 1;
+        // advance to the corresponding word in our memory
+        i = i + WORDSIZE;
       } else {
         printf("%s: opening file failed because the file name address 0x%08lX is in an invalid segment\n", selfie_name, (uint64_t) vaddr);
 
@@ -7604,7 +7725,7 @@ void emit_malloc() {
   emit_load(current_temporary(), REG_SP, 0); // size
   emit_addi(REG_SP, REG_SP, WORDSIZE);
 
-  // round up to word size
+  // round up to target-dependent memory word size
   emit_round_up(current_temporary(), WORDSIZE);
 
   // allocate register to compute new bump pointer
@@ -7763,6 +7884,8 @@ uint64_t* do_switch(uint64_t* from_context, uint64_t* to_context, uint64_t timeo
   else
     *(registers + REG_A6) = (uint64_t) from_context;
 
+  write_register(REG_A6);
+
   timer = timeout;
 
   if (debug_switch) {
@@ -7790,6 +7913,9 @@ void implement_switch() {
     print(" |- ");
     print_register_value(REG_A6);
   }
+
+  read_register(REG_A0);
+  read_register(REG_A1);
 
   to_context = (uint64_t*) *(registers + REG_A0);
   timeout    =             *(registers + REG_A1);
@@ -8022,7 +8148,8 @@ void fill_cache_block(uint64_t* cache, uint64_t* cache_block, uint64_t paddr) {
   uint64_t* block_memory;
   uint64_t i;
 
-  number_of_words_in_cache_block = get_cache_block_size(cache) / WORDSIZE;
+  // cache block size / SIZEOFUINT64 (not WORDSIZE)
+  number_of_words_in_cache_block = get_cache_block_size(cache) / SIZEOFUINT64;
 
   block_memory = get_block_memory(cache_block);
 
@@ -8073,7 +8200,8 @@ void flush_cache_block(uint64_t* cache, uint64_t* cache_block, uint64_t paddr) {
   uint64_t* block_memory;
   uint64_t i;
 
-  number_of_words_in_cache_block = get_cache_block_size(cache) / WORDSIZE;
+  // cache block size / SIZEOFUINT64 (not WORDSIZE)
+  number_of_words_in_cache_block = get_cache_block_size(cache) / SIZEOFUINT64;
 
   block_memory = get_block_memory(cache_block);
 
@@ -8097,7 +8225,7 @@ uint64_t load_from_cache(uint64_t* cache, uint64_t vaddr, uint64_t paddr) {
 
   block_memory = get_block_memory(cache_block);
 
-  return *(block_memory + cache_byte_offset(cache, vaddr) / WORDSIZE);
+  return *(block_memory + cache_byte_offset(cache, vaddr) / SIZEOFUINT64);
 }
 
 void store_in_cache(uint64_t* cache, uint64_t vaddr, uint64_t paddr, uint64_t data) {
@@ -8108,7 +8236,7 @@ void store_in_cache(uint64_t* cache, uint64_t vaddr, uint64_t paddr, uint64_t da
 
   block_memory = get_block_memory(cache_block);
 
-  *(block_memory + cache_byte_offset(cache, vaddr) / WORDSIZE) = data;
+  *(block_memory + cache_byte_offset(cache, vaddr) / SIZEOFUINT64) = data;
 
   flush_cache_block(cache, cache_block, paddr);
 }
@@ -8290,7 +8418,8 @@ uint64_t* tlb(uint64_t* table, uint64_t vaddr) {
   frame = get_frame_for_page(table, page);
 
   // map virtual address to physical address
-  paddr = vaddr - page * PAGESIZE + frame;
+  // (single word on 32-bit target occupies double word on 64-bit system)
+  paddr = (vaddr - page * PAGESIZE) * (SIZEOFUINT64 / WORDSIZE) + frame;
 
   if (debug_tlb)
     printf("%s: tlb access:\n vaddr: 0x%08lX\n page: 0x%04lX\n frame: 0x%08lX\n paddr: 0x%08lX\n", selfie_name,
@@ -8431,7 +8560,7 @@ void implement_gc_brk(uint64_t* context) {
     // assert: _bump pointer is last entry in data segment
 
     // updating the _bump pointer of the program (for consistency)
-    store_virtual_memory(get_pt(context), get_data_seg_end_gc(context) - SIZEOFUINT64, get_program_break(context));
+    store_virtual_memory(get_pt(context), get_data_seg_end_gc(context) - WORDSIZE, get_program_break(context));
 
     sc_brk = sc_brk + 1;
 
@@ -8571,7 +8700,12 @@ void gc_init_selfie(uint64_t* context) {
   reset_gc_counters();
 
   // calculate metadata size using actual width of integers/pointers
-  GC_METADATA_SIZE =  SIZEOFUINT64 * 2 + SIZEOFUINT64STAR * 2;
+  GC_METADATA_SIZE = SIZEOFUINT64 * 2 + SIZEOFUINT64STAR * 2;
+
+  if (is_gc_library(context))
+    GC_WORDSIZE = SIZEOFUINT64;
+  else
+    GC_WORDSIZE = WORDSIZE;
 
   set_data_and_heap_segments_gc(context);
 
@@ -8642,7 +8776,7 @@ void zero_object(uint64_t* context, uint64_t* metadata) {
   while (object_start < object_end) {
     gc_store_memory(context, object_start, 0);
 
-    object_start = object_start + SIZEOFUINT64;
+    object_start = object_start + GC_WORDSIZE;
   }
 }
 
@@ -8751,7 +8885,7 @@ uint64_t* gc_malloc_implementation(uint64_t* context, uint64_t size) {
 
   // then, allocate memory
 
-  size = round_up(size, SIZEOFUINT64);
+  size = round_up(size, GC_WORDSIZE);
 
   return allocate_memory(context, size);
 }
@@ -8771,10 +8905,11 @@ uint64_t* get_metadata_if_address_is_valid(uint64_t* context, uint64_t address) 
   node = get_used_list_head_gc(context);
 
   while (node != (uint64_t*) 0) {
-    if (address >= (uint64_t) node)
-      if (address < ((uint64_t) node + GC_METADATA_SIZE))
-        // address points to metadata
-        return (uint64_t*) 0;
+    if (is_gc_library(context))
+      if (address >= (uint64_t) node)
+        if (address < ((uint64_t) node + GC_METADATA_SIZE))
+          // address points to metadata (redundant check but possibly faster)
+          return (uint64_t*) 0;
 
     object = (uint64_t) get_metadata_memory(node);
 
@@ -8802,8 +8937,9 @@ void mark_object_selfie(uint64_t* context, uint64_t gc_address) {
   uint64_t object_start;
   uint64_t object_end;
 
-  if (is_virtual_address_valid(gc_address, WORDSIZE) == 0)
-    return;
+  if (is_gc_library(context) == 0)
+    if (is_virtual_address_valid(gc_address, WORDSIZE) == 0)
+      return;
 
   metadata = get_metadata_if_address_is_valid(context, gc_address);
 
@@ -8822,23 +8958,21 @@ void mark_object_selfie(uint64_t* context, uint64_t gc_address) {
   while (object_start < object_end) {
     mark_object(context, object_start);
 
-    object_start = object_start + SIZEOFUINT64;
+    object_start = object_start + GC_WORDSIZE;
   }
 }
 
 void mark_segment(uint64_t* context, uint64_t segment_start, uint64_t segment_end) {
   // assert: segment is not heap
 
-  // prevent (32-bit) overflow by subtracting SIZEOFUINT64 from index
-  segment_start = segment_start - SIZEOFUINT64;
+  // prevent (32-bit) overflow by subtracting GC_WORDSIZE from index
+  segment_start = segment_start - GC_WORDSIZE;
 
-  while (segment_start < segment_end - WORDSIZE) {
-    // assert: is_virtual_address_valid(segment_start, WORDSIZE) == 1
-    // assert: is_virtual_address_mapped(segment_start) == 1
-    // undo index offset before marking address
-    mark_object(context, segment_start + SIZEOFUINT64);
+  while (segment_start < segment_end - GC_WORDSIZE) {
+    // undo GC_WORDSIZE index offset before marking address
+    mark_object(context, segment_start + GC_WORDSIZE);
 
-    segment_start = segment_start + SIZEOFUINT64;
+    segment_start = segment_start + GC_WORDSIZE;
   }
 }
 
@@ -8954,24 +9088,6 @@ void print_gc_profile(uint64_t* context) {
   println();
 }
 
-void gc_arguments() {
-  if (string_compare(argument, "-gc")) {
-    GC_ON = GC_ENABLED;
-
-    get_argument();
-  } else if (string_compare(argument, "-nrgc")) {
-    GC_ON    = GC_ENABLED;
-    GC_REUSE = GC_DISABLED;
-
-    get_argument();
-  } else if (string_compare(argument, "-nr")) {
-    GC_REUSE = GC_DISABLED;
-
-    get_argument();
-  } else
-    GC_ON = GC_DISABLED;
-}
-
 // -----------------------------------------------------------------
 // ------------------------- INSTRUCTIONS --------------------------
 // -----------------------------------------------------------------
@@ -9034,8 +9150,6 @@ void do_lui() {
 
   uint64_t next_rd_value;
 
-  update_register_counters();
-
   if (rd != REG_ZR) {
     // semantics of lui
     next_rd_value = left_shift(imm, 12);
@@ -9046,6 +9160,8 @@ void do_lui() {
       nopc_lui = nopc_lui + 1;
   } else
     nopc_lui = nopc_lui + 1;
+
+  write_register(rd);
 
   pc = pc + INSTRUCTIONSIZE;
 
@@ -9086,7 +9202,7 @@ void do_addi() {
 
   uint64_t next_rd_value;
 
-  update_register_counters();
+  read_register_wrap(rs1, imm);
 
   if (rd != REG_ZR) {
     // semantics of addi
@@ -9098,6 +9214,8 @@ void do_addi() {
       nopc_addi = nopc_addi + 1;
   } else
     nopc_addi = nopc_addi + 1;
+
+  write_register(rd);
 
   pc = pc + INSTRUCTIONSIZE;
 
@@ -9121,7 +9239,8 @@ void print_add_sub_mul_divu_remu_sltu_before() {
 void do_add() {
   uint64_t next_rd_value;
 
-  update_register_counters();
+  read_register(rs1);
+  read_register(rs2);
 
   if (rd != REG_ZR) {
     // semantics of add
@@ -9134,6 +9253,8 @@ void do_add() {
   } else
     nopc_add = nopc_add + 1;
 
+  write_register(rd);
+
   pc = pc + INSTRUCTIONSIZE;
 
   ic_add = ic_add + 1;
@@ -9142,7 +9263,8 @@ void do_add() {
 void do_sub() {
   uint64_t next_rd_value;
 
-  update_register_counters();
+  read_register(rs1);
+  read_register(rs2);
 
   if (rd != REG_ZR) {
     // semantics of sub
@@ -9155,6 +9277,8 @@ void do_sub() {
   } else
     nopc_sub = nopc_sub + 1;
 
+  write_register(rd);
+
   pc = pc + INSTRUCTIONSIZE;
 
   ic_sub = ic_sub + 1;
@@ -9163,7 +9287,8 @@ void do_sub() {
 void do_mul() {
   uint64_t next_rd_value;
 
-  update_register_counters();
+  read_register(rs1);
+  read_register(rs2);
 
   if (rd != REG_ZR) {
     // semantics of mul
@@ -9178,6 +9303,8 @@ void do_mul() {
   } else
     nopc_mul = nopc_mul + 1;
 
+  write_register(rd);
+
   pc = pc + INSTRUCTIONSIZE;
 
   ic_mul = ic_mul + 1;
@@ -9189,7 +9316,8 @@ void do_divu() {
   uint64_t next_rd_value;
 
   if (*(registers + rs2) != 0) {
-    update_register_counters();
+    read_register(rs1);
+    read_register(rs2);
 
     if (rd != REG_ZR) {
       // semantics of divu
@@ -9201,6 +9329,8 @@ void do_divu() {
         nopc_divu = nopc_divu + 1;
     } else
       nopc_divu = nopc_divu + 1;
+
+    write_register(rd);
 
     pc = pc + INSTRUCTIONSIZE;
 
@@ -9215,7 +9345,8 @@ void do_remu() {
   uint64_t next_rd_value;
 
   if (*(registers + rs2) != 0) {
-    update_register_counters();
+    read_register(rs1);
+    read_register(rs2);
 
     if (rd != REG_ZR) {
       // semantics of remu
@@ -9227,6 +9358,8 @@ void do_remu() {
         nopc_remu = nopc_remu + 1;
     } else
       nopc_remu = nopc_remu + 1;
+
+    write_register(rd);
 
     pc = pc + INSTRUCTIONSIZE;
 
@@ -9240,7 +9373,8 @@ void do_sltu() {
 
   uint64_t next_rd_value;
 
-  update_register_counters();
+  read_register(rs1);
+  read_register(rs2);
 
   if (rd != REG_ZR) {
     // semantics of sltu
@@ -9255,6 +9389,8 @@ void do_sltu() {
       nopc_sltu = nopc_sltu + 1;
   } else
     nopc_sltu = nopc_sltu + 1;
+
+  write_register(rd);
 
   pc = pc + INSTRUCTIONSIZE;
 
@@ -9314,13 +9450,13 @@ uint64_t do_load() {
 
   // load (double) word
 
+  read_register(rs1);
+
   vaddr = *(registers + rs1) + imm;
 
   if (is_virtual_address_valid(vaddr, WORDSIZE)) {
     if (is_valid_segment_read(vaddr)) {
       if (is_virtual_address_mapped(pt, vaddr)) {
-        update_register_counters();
-
         if (rd != REG_ZR) {
           // semantics of load (double) word
           next_rd_value = load_cached_virtual_memory(pt, vaddr);
@@ -9331,6 +9467,8 @@ uint64_t do_load() {
             nopc_load = nopc_load + 1;
         } else
           nopc_load = nopc_load + 1;
+
+        write_register_wrap(rd, 0);
 
         // keep track of instruction address for profiling loads
         a = (pc - code_start) / INSTRUCTIONSIZE;
@@ -9404,12 +9542,14 @@ uint64_t do_store() {
 
   // store (double) word
 
+  read_register(rs1);
+
   vaddr = *(registers + rs1) + imm;
 
   if (is_virtual_address_valid(vaddr, WORDSIZE)) {
     if (is_valid_segment_write(vaddr)) {
       if (is_virtual_address_mapped(pt, vaddr)) {
-        update_register_counters();
+        read_register_wrap(rs2, 0);
 
         // semantics of store (double) word
         if (load_virtual_memory(pt, vaddr) != *(registers + rs2))
@@ -9480,7 +9620,8 @@ void record_beq() {
 void do_beq() {
   // branch on equal
 
-  update_register_counters();
+  read_register(rs1);
+  read_register(rs2);
 
   // semantics of beq
   if (*(registers + rs1) == *(registers + rs2))
@@ -9527,8 +9668,6 @@ void do_jal() {
 
   // jump and link
 
-  update_register_counters();
-
   if (rd != REG_ZR) {
     // first link
     *(registers + rd) = pc + INSTRUCTIONSIZE;
@@ -9564,6 +9703,8 @@ void do_jal() {
       nopc_jal = nopc_jal + 1;
   }
 
+  write_register(rd);
+
   ic_jal = ic_jal + 1;
 }
 
@@ -9588,7 +9729,7 @@ void do_jalr() {
 
   // jump and link register
 
-  update_register_counters();
+  read_register(rs1);
 
   // prepare jump rs1-relative with LSB reset
   next_pc = left_shift(right_shift(*(registers + rs1) + imm, 1), 1);
@@ -9609,6 +9750,8 @@ void do_jalr() {
     pc = next_pc;
   }
 
+  write_register(rd);
+
   ic_jalr = ic_jalr + 1;
 }
 
@@ -9623,6 +9766,8 @@ void record_ecall() {
 }
 
 void do_ecall() {
+  read_register(REG_A7);
+
   ic_ecall = ic_ecall + 1;
 
   if (redo) {
@@ -9647,9 +9792,24 @@ void do_ecall() {
 
       implement_switch();
     }
-  else
+  else {
+    read_register(REG_A0);
+
+    if (*(registers + REG_A7) != SYSCALL_EXIT) {
+      if (*(registers + REG_A7) != SYSCALL_BRK) {
+        read_register(REG_A1);
+        read_register(REG_A2);
+
+        if (*(registers + REG_A7) == SYSCALL_OPENAT)
+          read_register(REG_A3);
+      }
+
+      write_register(REG_A0);
+    }
+
     // all system calls other than switch are handled by exception
     throw_exception(EXCEPTION_SYSCALL, *(registers + REG_A7));
+  }
 }
 
 void undo_ecall() {
@@ -9666,7 +9826,7 @@ void undo_ecall() {
 
 uint64_t print_data_line_number() {
   if (data_line_number != (uint64_t*) 0)
-    return dprintf(output_fd, "(~%lu)", *(data_line_number + (pc - code_size) / SIZEOFUINT64));
+    return dprintf(output_fd, "(~%lu)", *(data_line_number + (pc - code_size) / WORDSIZE));
   else
     return 0;
 }
@@ -9677,17 +9837,19 @@ uint64_t print_data_context() {
     + dprintf(output_fd, ": ");
 }
 
-uint64_t print_data(uint64_t data) {
+uint64_t print_data() {
   uint64_t w;
 
   if (disassemble_verbose)
     w = print_data_context();
   else
     w = 0;
-  if (IS64BITSYSTEM)
-    return w + dprintf(output_fd, ".8byte 0x%lX", data);
+  if (IS64BITTARGET)
+    w = w + dprintf(output_fd, ".8byte ");
   else
-    return w + dprintf(output_fd, ".4byte 0x%lX", data);
+    w = w + dprintf(output_fd, ".4byte ");
+
+  return w + dprintf(output_fd, "0x%lX", load_data(pc - code_size));
 }
 
 // -----------------------------------------------------------------
@@ -9734,7 +9896,6 @@ uint64_t print_instruction() {
 
 void selfie_disassemble(uint64_t verbose) {
   uint64_t number_of_written_characters;
-  uint64_t data;
 
   assembly_name = get_argument();
 
@@ -9770,6 +9931,7 @@ void selfie_disassemble(uint64_t verbose) {
     ir = load_instruction(pc);
 
     decode();
+
     number_of_written_characters = number_of_written_characters
       + print_instruction()
       + dprintf(output_fd, "\n");
@@ -9778,10 +9940,8 @@ void selfie_disassemble(uint64_t verbose) {
   }
 
   while (pc - code_size < data_size) {
-    data = load_data(pc - code_size);
-
     number_of_written_characters = number_of_written_characters
-      + print_data(data)
+      + print_data()
       + dprintf(output_fd, "\n");
 
     pc = pc + WORDSIZE;
@@ -9792,9 +9952,10 @@ void selfie_disassemble(uint64_t verbose) {
   output_name = (char*) 0;
   output_fd   = 1;
 
-  printf("%s: %lu characters of assembly with %lu instructions and %lu bytes of data written into %s\n", selfie_name,
+  printf("%s: %lu characters of assembly with %lu %lu-bit RISC-U instructions and %lu bytes of data written into %s\n", selfie_name,
     number_of_written_characters,
     code_size / INSTRUCTIONSIZE,
+    WORDSIZEINBITS,
     data_size,
     assembly_name);
 }
@@ -9925,9 +10086,9 @@ void fetch() {
       // assert: is_virtual_address_mapped(pt, pc) == 1
 
       if (pc % WORDSIZE == 0)
-        ir = get_low_instruction(load_cached_instruction_word(pt, pc));
+        ir = get_low_word(load_cached_instruction_word(pt, pc));
       else
-        ir = get_high_instruction(load_cached_instruction_word(pt, pc - INSTRUCTIONSIZE));
+        ir = get_high_word(load_cached_instruction_word(pt, pc - INSTRUCTIONSIZE));
 
       return;
     } else
@@ -9952,7 +10113,7 @@ void decode() {
   } else if (opcode == OP_LOAD) {
     decode_i_format();
 
-    if (IS64BITSYSTEM) {
+    if (IS64BITTARGET) {
       if (funct3 == F3_LD)
         is = LOAD;
     } else if (funct3 == F3_LW)
@@ -9960,7 +10121,7 @@ void decode() {
   } else if (opcode == OP_STORE) {
     decode_s_format();
 
-    if (IS64BITSYSTEM) {
+    if (IS64BITTARGET) {
       if (funct3 == F3_SD)
         is = STORE;
     } else if (funct3 == F3_SW)
@@ -10865,8 +11026,10 @@ uint64_t pavailable() {
 uint64_t pexcess() {
   if (pavailable())
     return 1;
-  else if (allocated_page_frame_memory + MEGABYTE <= 2 * total_page_frame_memory)
-    // tolerate twice as much memory mapped on demand than physically available
+  else if (allocated_page_frame_memory + MEGABYTE <=
+            2 * total_page_frame_memory * SIZEOFUINT64 / WORDSIZE)
+    // tolerate twice (four times) as much memory mapped on demand than physically available
+    // (single word on 32-bit target occupies double word on 64-bit system)
     return 1;
   else
     return 0;
@@ -10877,15 +11040,19 @@ uint64_t pused() {
 }
 
 uint64_t* palloc() {
+  uint64_t double_for_single_word;
   uint64_t block;
   uint64_t frame;
+
+  // single word on 32-bit target occupies double word on 64-bit system
+  double_for_single_word = SIZEOFUINT64 / WORDSIZE;
 
   // assert: total_page_frame_memory is equal to or a multiple of MEGABYTE
   // assert: PAGESIZE is a factor of MEGABYTE strictly less than MEGABYTE
 
   if (free_page_frame_memory == 0) {
     if (pexcess()) {
-      free_page_frame_memory = MEGABYTE;
+      free_page_frame_memory = MEGABYTE * double_for_single_word;
 
       // on boot level zero allocate zeroed memory
       block = (uint64_t) zmalloc(free_page_frame_memory);
@@ -10893,11 +11060,11 @@ uint64_t* palloc() {
       allocated_page_frame_memory = allocated_page_frame_memory + free_page_frame_memory;
 
       // page frames must be page-aligned to work as page table index
-      next_page_frame = round_up(block, PAGESIZE);
+      next_page_frame = round_up(block, PAGESIZE * double_for_single_word);
 
       if (next_page_frame > block)
         // losing one page frame to fragmentation
-        free_page_frame_memory = free_page_frame_memory - PAGESIZE;
+        free_page_frame_memory = free_page_frame_memory - PAGESIZE * double_for_single_word;
     } else {
       printf("%s: palloc out of physical memory\n", selfie_name);
 
@@ -10907,12 +11074,12 @@ uint64_t* palloc() {
 
   frame = next_page_frame;
 
-  next_page_frame = next_page_frame + PAGESIZE;
+  next_page_frame = next_page_frame + PAGESIZE * double_for_single_word;
 
-  free_page_frame_memory = free_page_frame_memory - PAGESIZE;
+  free_page_frame_memory = free_page_frame_memory - PAGESIZE * double_for_single_word;
 
   // strictly, touching is only necessary on boot levels higher than 0
-  return touch((uint64_t*) frame, PAGESIZE);
+  return touch((uint64_t*) frame, PAGESIZE * double_for_single_word);
 }
 
 void pfree(uint64_t* frame) {
@@ -10981,11 +11148,7 @@ uint64_t up_load_string(uint64_t* context, char* s, uint64_t SP) {
   i = 0;
 
   while (i < bytes) {
-    // CAUTION: at boot levels higher than 0, s is only accessible
-    // in C* at word granularity, not individual characters
-    map_and_store(context, SP + i, *((uint64_t*) s));
-
-    s = (char*) ((uint64_t*) s + 1);
+    map_and_store(context, SP + i, load_word((uint64_t*) s, i, 1));
 
     i = i + WORDSIZE;
   }
@@ -11438,7 +11601,8 @@ uint64_t selfie_run(uint64_t machine) {
 
   run = 1;
 
-  printf("%s: selfie executing %s with %luMB physical memory", selfie_name,
+  printf("%s: selfie executing %lu-bit RISC-U binary %s with %luMB physical memory", selfie_name,
+    WORDSIZEINBITS,
     binary_name,
     total_page_frame_memory / MEGABYTE);
 
@@ -11446,23 +11610,23 @@ uint64_t selfie_run(uint64_t machine) {
     gc_init(current_context);
 
     printf(", gcing every %lu mallocs, ", GC_PERIOD);
-    if (GC_REUSE) print("reusing memory"); else print("not reusing memory");
+    if (GC_REUSE) printf("reusing memory"); else printf("not reusing memory");
   }
 
   if (machine == DIPSTER) {
     debug          = 1;
     debug_syscalls = 1;
-    print(", debugger");
+    printf(", debugger");
     machine = MIPSTER;
   } else if (machine == RIPSTER) {
     debug  = 1;
     record = 1;
     init_replay_engine();
-    print(", replay");
+    printf(", replay");
     machine = MIPSTER;
   }
 
-  print(" on ");
+  printf(" on %lu-bit ", SIZEOFUINT64INBITS);
 
   if (machine == MIPSTER)
     exit_code = mipster(current_context);
@@ -11481,7 +11645,8 @@ uint64_t selfie_run(uint64_t machine) {
   debug_syscalls = 0;
   debug          = 0;
 
-  printf("%s: selfie terminating %s with exit code %ld\n", selfie_name,
+  printf("%s: selfie terminating %lu-bit RISC-U binary %s with exit code %ld\n", selfie_name,
+    WORDSIZEINBITS,
     get_name(current_context),
     sign_extend(exit_code, SYSCALL_BITWIDTH));
 
@@ -11572,13 +11737,14 @@ uint64_t selfie(uint64_t extras) {
     init_bootstrapping();
 
     init_register();
-    init_disassembler();
     init_interpreter();
+
+    init_disassembler();
 
     while (number_of_remaining_arguments() > 0) {
       get_argument();
 
-      gc_arguments();
+      experimental_features();
 
       if (string_compare(argument, "-c"))
         selfie_compile();
@@ -11618,6 +11784,40 @@ uint64_t selfie(uint64_t extras) {
   }
 }
 
+void experimental_features() {
+  if (string_compare(argument, "-m32")) {
+    IS64BITTARGET = 0;
+
+    init_target();
+    reset_disassembler();
+    reset_binary();
+
+    get_argument();
+  } else if (string_compare(argument, "-m64")) {
+    IS64BITTARGET = 1;
+
+    init_target();
+    reset_disassembler();
+    reset_binary();
+
+    get_argument();
+  } else if (string_compare(argument, "-gc")) {
+    GC_ON = GC_ENABLED;
+
+    get_argument();
+  } else if (string_compare(argument, "-nrgc")) {
+    GC_ON    = GC_ENABLED;
+    GC_REUSE = GC_DISABLED;
+
+    get_argument();
+  } else if (string_compare(argument, "-nr")) {
+    GC_REUSE = GC_DISABLED;
+
+    get_argument();
+  } else
+    GC_ON = GC_DISABLED;
+}
+
 uint64_t exit_selfie(uint64_t exit_code, char* extras) {
   if (no_or_bad_or_more_arguments(exit_code))
     print_synopsis(extras);
@@ -11641,8 +11841,8 @@ int main(int argc, char** argv) {
   init_selfie((uint64_t) argc, (uint64_t*) argv);
 
   init_library();
-
   init_system();
+  init_target();
 
   exit_code = selfie(0);
 
