@@ -436,12 +436,19 @@ uint64_t SYM_GT           = 26; // >
 uint64_t SYM_GEQ          = 27; // >=
 uint64_t SYM_ELLIPSIS     = 28; // ...
 
+
 // symbols for bootstrapping
 
 uint64_t SYM_INT      = 29; // int
 uint64_t SYM_CHAR     = 30; // char
 uint64_t SYM_UNSIGNED = 31; // unsigned
 uint64_t SYM_CONST    = 32; // const
+
+
+// === Assignments 2 ===
+// symbols for bit shifting
+uint64_t SYM_L_BIT_SHIFT = 33; // <<
+uint64_t SYM_R_BIT_SHIFT = 34; // >> 
 
 uint64_t* SYMBOLS; // strings representing symbols
 
@@ -515,6 +522,11 @@ void init_scanner () {
   *(SYMBOLS + SYM_CHAR)     = (uint64_t) "char";
   *(SYMBOLS + SYM_UNSIGNED) = (uint64_t) "unsigned";
   *(SYMBOLS + SYM_CONST)    = (uint64_t) "const";
+
+  // ==== Assignment 2 ==== 
+  *(SYMBOLS + SYM_L_BIT_SHIFT) = (uint64_t) "<<";
+  *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
+
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -698,6 +710,10 @@ uint64_t* compile_variable(uint64_t offset);
 uint64_t  compile_initialization(uint64_t type);
 void      compile_procedure(char* procedure, uint64_t type);
 void      compile_cstar();
+
+// === Assignment 2 ===
+ 
+
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -5172,6 +5188,12 @@ void compile_statement() {
     else
       get_symbol();
   }
+
+  // === Assignment 2 ===
+  // We must check, just like done here with the other expression for our << and >> operators.
+
+  // 
+
 
   // ["*"]
   if (symbol == SYM_ASTERISK) {
