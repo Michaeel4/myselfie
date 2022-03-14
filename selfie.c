@@ -447,8 +447,12 @@ uint64_t SYM_CONST    = 32; // const
 
 // === Assignments 2 ===
 // symbols for bit shifting
+
 uint64_t SYM_L_BIT_SHIFT = 33; // <<
 uint64_t SYM_R_BIT_SHIFT = 34; // >> 
+
+
+// =====================
 
 uint64_t* SYMBOLS; // strings representing symbols
 
