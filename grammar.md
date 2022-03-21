@@ -14,19 +14,26 @@ C\* Symbols: `integer_literal`, `character_literal`, `string_literal`, `identifi
 
 with:
 
+
 ```
 integer_literal   = digit { digit } .
+
+hex_literal =  digit | hex_letter { digit | hex_letter } 
 
 character_literal = "'" printable_character "'" .
 
 string_literal    = """ { printable_character } """ .
 
 identifier        = letter { letter | digit | "_" } .
+
+
 ```
 
 and:
 
 ```
+hex_letter = "A" | "B" | "C" | "D" | "E" | "F" | "a" | "b" | "c" | "e" | "f"
+
 digit  = "0" | ... | "9" .
 
 letter = "a" | ... | "z" | "A" | ... | "Z" .
