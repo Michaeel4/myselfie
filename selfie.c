@@ -2843,8 +2843,8 @@ uint64_t atoi(char* s) {
 
     // iterate one step further to get the first character
     i = i + 1;
-
-    load_character(s, i);
+    // load the next character value 
+    c = load_character(s, i);
 
     // as long as c is not zero, we have a valid value
     while(c != 0){
@@ -2870,12 +2870,13 @@ uint64_t atoi(char* s) {
 
 
       
+      n = n + c * 16;
 
 
 
-
-
-
+      //get the next charakter
+      i = i + 1;
+      c = load_character(s, i);
 
     }
 
