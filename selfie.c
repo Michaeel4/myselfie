@@ -2831,6 +2831,22 @@ uint64_t atoi(char* s) {
   // bit shifting since memory access can only be done at word granularity
   c = load_character(s, i);
 
+
+
+  // === Assignment 1 ===
+
+  // Check if the current character contains a hexadecimal prefix to detect hexadecimal values
+  if(character == 'x'){
+
+
+    while(c != 0){
+
+
+
+
+    }
+  }
+
   // loop until s is terminated
   while (c != 0) {
     // the numerical value of ASCII-encoded decimal digits
@@ -3725,6 +3741,15 @@ void get_symbol() {
           i = i + 1;
 
           get_character();
+        }
+
+
+      // === Assignment 1 ===
+
+
+        if(character == 'x'){
+
+
         }
 
         store_character(integer, i, 0); // null-terminated string
