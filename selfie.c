@@ -11836,7 +11836,7 @@ uint64_t selfie(uint64_t extras) {
     return EXITCODE_NOARGUMENTS;
   else {
 
-    printf("%s: this is the selfie system 000 from %s with\n", selfie_name, SELFIE_URL);
+    printf("%s: this is the selfie system from %s with\n", selfie_name, SELFIE_URL);
 
     printf("%s: %lu-bit unsigned integers and %lu-bit pointers hosted on ", selfie_name,
       SIZEOFUINT64INBITS,
