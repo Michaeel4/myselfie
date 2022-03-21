@@ -2849,8 +2849,6 @@ uint64_t atoi(char* s) {
     // as long as c is not zero, we have a valid value
     while(c != 0){
 
-
-
       // check bound values to determine what we have to encode/decode
 
       // detect upper letters
@@ -3782,9 +3780,18 @@ void get_symbol() {
 
       // === Assignment 1 ===
 
-
+        // similiar to the is_digit statement, we can check if we have a hexadecimal value
+        // and then store load the character as seen in the above statement. 
         if(character == 'x'){
 
+            while(is_character_letter_or_digit_or_underscore()){
+
+              if(i-1 >= 16){
+                
+
+              }
+            }
+            
 
         }
 
