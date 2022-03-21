@@ -2815,6 +2815,9 @@ uint64_t string_compare(char* s, char* t) {
       return 0;
 }
 
+
+
+
 uint64_t atoi(char* s) {
   uint64_t i;
   uint64_t n;
@@ -2836,15 +2839,47 @@ uint64_t atoi(char* s) {
   // === Assignment 1 ===
 
   // Check if the current character contains a hexadecimal prefix to detect hexadecimal values
-  if(character == 'x'){
+  if(c == 'x'){
 
+    // iterate one step further to get the first character
+    i = i + 1;
 
+    load_character(s, i);
+
+    // as long as c is not zero, we have a valid value
     while(c != 0){
+
+
+
+      // check bound values to determine what we have to encode/decode
+
+      // detect upper letters
+      if(c >= 'A')
+        if(c <= 'F')
+          c = c - 55;
+
+      // detect lower letters
+      if(c >= 'a')
+        if(c <= 'f')
+          c = c - 67;
+
+      // detect numeric values
+      if(c >= '0')
+        if(c <= '9')
+          c = c - 0;
+
+
+      
+
+
+
 
 
 
 
     }
+
+    return n;
   }
 
   // loop until s is terminated
