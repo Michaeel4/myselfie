@@ -2864,11 +2864,11 @@ uint64_t atoi(char* s) {
       // detect numeric values
       if(c >= '0')
         if(c <= '9')
-          c = c - 0;
+          c = c - '0';
 
 
       
-      n = n + c * 16;
+      n = n * 16 + c;
 
 
 
@@ -3782,18 +3782,42 @@ void get_symbol() {
 
         // similiar to the is_digit statement, we can check if we have a hexadecimal value
         // and then store load the character as seen in the above statement. 
-        if(character == 'x'){
-
-            while(is_character_letter_or_digit_or_underscore()){
-
+        if(character== 'x'){
+          // check if the current character is zero
+          // store and iterate further
+          if (load_character(integer, 0) == '0') {
+               store_character(integer, 0, character);
+               get_character();
+          }
+          // use selfies own method to check whetever if we deal with a a-f, A-F or 0-9 digit number
+          while(is_character_letter_or_digit_or_underscore()){
+              // we start with i - 1 because of the prefix
               if(i-1 >= 16){
-                
-
+                //taken from above 
+                if (integer_is_signed)
+                  syntax_error_message("signed integer out of bound");  
+                else
+                  syntax_error_message("integer out of bound");
+                exit(EXITCODE_SCANNERERROR);
               }
+
+            // store the character that is not out of bound or that is not 0
+            store_character(integer, i, character);
+
+
+
+            // iterate further 
+            i = i + 1;
+
+            // pull the next character
+            get_character();
+            }
+
             }
             
 
-        }
+        // ===================
+      
 
         store_character(integer, i, 0); // null-terminated string
 
