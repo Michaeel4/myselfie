@@ -3717,6 +3717,22 @@ uint64_t identifier_or_keyword() {
     return SYM_IDENTIFIER;
 }
 
+// ===== Assignment 1 ===== 
+// used to identify hexadecimal values
+// it uses is_letter and is_digit from selfie to determine a valid hexadecimal value
+// See further explanation below
+uint64_t is_hexa(){
+  if(is_letter(character))
+    return 1;
+  else if (is_digit(character))
+    return 1;
+  else
+    return 0;
+}
+
+
+
+
 void get_symbol() {
   uint64_t i;
 
@@ -3789,8 +3805,14 @@ void get_symbol() {
                store_character(integer, 0, character);
                get_character();
           }
+
+          /// FIX /// 
           // use selfies own method to check whetever if we deal with a a-f, A-F or 0-9 digit number
-          while(is_character_letter_or_digit_or_underscore()){
+          //while(is_character_letter_or_digit_or_underscore()){
+
+            // fixed this to a own method, as "is_character_letter_or_digit_or_underscore"
+            // can cause issues for _ values (which are not tested but still)
+            while(is_hexa()){
               // we start with i - 1 because of the prefix
               if(i-1 >= 16){
                 //taken from above 
