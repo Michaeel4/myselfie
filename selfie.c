@@ -2815,6 +2815,9 @@ uint64_t string_compare(char* s, char* t) {
       return 0;
 }
 
+
+
+
 uint64_t atoi(char* s) {
   uint64_t i;
   uint64_t n;
@@ -2830,6 +2833,53 @@ uint64_t atoi(char* s) {
   // load character (one byte) at index i in s from memory requires
   // bit shifting since memory access can only be done at word granularity
   c = load_character(s, i);
+
+
+
+  // === Assignment 1 ===
+
+  // Check if the current character contains a hexadecimal prefix to detect hexadecimal values
+  if(c == 'x'){
+
+    // iterate one step further to get the first character
+    i = i + 1;
+    // load the next character value 
+    c = load_character(s, i);
+
+    // as long as c is not zero, we have a valid value
+    while(c != 0){
+
+      // check bound values to determine what we have to encode/decode
+
+      // detect upper letters
+      if(c >= 'A')
+        if(c <= 'F')
+          c = c - 55;
+
+      // detect lower letters
+      if(c >= 'a')
+        if(c <= 'f')
+          c = c - 67;
+
+      // detect numeric values
+      if(c >= '0')
+        if(c <= '9')
+          c = c - '0';
+
+
+      
+      n = n * 16 + c;
+
+
+
+      //get the next charakter
+      i = i + 1;
+      c = load_character(s, i);
+
+    }
+
+    return n;
+  }
 
   // loop until s is terminated
   while (c != 0) {
@@ -3726,6 +3776,48 @@ void get_symbol() {
 
           get_character();
         }
+
+
+      // === Assignment 1 ===
+
+        // similiar to the is_digit statement, we can check if we have a hexadecimal value
+        // and then store load the character as seen in the above statement. 
+        if(character== 'x'){
+          // check if the current character is zero
+          // store and iterate further
+          if (load_character(integer, 0) == '0') {
+               store_character(integer, 0, character);
+               get_character();
+          }
+          // use selfies own method to check whetever if we deal with a a-f, A-F or 0-9 digit number
+          while(is_character_letter_or_digit_or_underscore()){
+              // we start with i - 1 because of the prefix
+              if(i-1 >= 16){
+                //taken from above 
+                if (integer_is_signed)
+                  syntax_error_message("signed integer out of bound");  
+                else
+                  syntax_error_message("integer out of bound");
+                exit(EXITCODE_SCANNERERROR);
+              }
+
+            // store the character that is not out of bound or that is not 0
+            store_character(integer, i, character);
+
+
+
+            // iterate further 
+            i = i + 1;
+
+            // pull the next character
+            get_character();
+            }
+
+            }
+            
+
+        // ===================
+      
 
         store_character(integer, i, 0); // null-terminated string
 
