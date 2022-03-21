@@ -3806,6 +3806,7 @@ void get_symbol() {
                get_character();
           }
 
+
           /// FIX /// 
           // use selfies own method to check whetever if we deal with a a-f, A-F or 0-9 digit number
           //while(is_character_letter_or_digit_or_underscore()){
@@ -3813,6 +3814,10 @@ void get_symbol() {
             // fixed this to a own method, as "is_character_letter_or_digit_or_underscore"
             // can cause issues for _ values (which are not tested but still)
             while(is_hexa()){
+
+          // use selfies own method to check whetever if we deal with a a-f, A-F or 0-9 digit number
+          //while(is_character_letter_or_digit_or_underscore()){
+
               // we start with i - 1 because of the prefix
               if(i-1 >= 16){
                 //taken from above 

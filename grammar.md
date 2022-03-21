@@ -14,8 +14,10 @@ C\* Symbols: `integer_literal`, `character_literal`, `string_literal`, `identifi
 
 with:
 
+
 ```
 integer_literal   = digit { digit } .
+
 
 hex_literal = "0x" digit | hex_letter { digit | hex_letter } 
 
