@@ -251,6 +251,8 @@ uint64_t CHAR_GT           = '>';
 uint64_t CHAR_BACKSLASH    =  92; // ASCII code 92 = backslash
 uint64_t CHAR_DOT          = '.';
 
+
+
 uint64_t* character_buffer; // buffer for reading and writing characters
 
 char* integer_buffer; // buffer for formatting integers
@@ -446,7 +448,7 @@ uint64_t SYM_CONST    = 32; // const
 
 
 // === Assignments 2 ===
-// symbols for bit shifting
+// symbols for bit shifting << and >>
 
 uint64_t SYM_L_BIT_SHIFT = 33; // <<
 uint64_t SYM_R_BIT_SHIFT = 34; // >> 
@@ -3806,6 +3808,17 @@ void get_symbol() {
       } else if (character == CHAR_LT) {
         get_character();
 
+        // Assignment 2 =====
+
+        if(character == CHAR_LT){
+
+
+        symbol = SYM_L_BIT_SHIFT;
+
+                get_character();
+
+         }
+
         if (character == CHAR_EQUAL) {
           get_character();
 
@@ -3813,8 +3826,26 @@ void get_symbol() {
         } else
           symbol = SYM_LT;
 
-      } else if (character == CHAR_GT) {
+      }// else if (character == CHAR_GT) {
+      //   get_character();
+        
+        
+      //   }
+        
+        
+        else if (character == CHAR_GT) {
         get_character();
+
+
+        // Assignment 2 =====
+
+
+        if(character == CHAR_GT){
+
+          get_character();
+
+          symbol = SYM_R_BIT_SHIFT;
+        }
 
         if (character == CHAR_EQUAL) {
           get_character();
@@ -4081,7 +4112,7 @@ uint64_t is_plus_or_minus() {
   else
     return 0;
 }
-
+// Assignment2 ====
 uint64_t is_comparison() {
   if (symbol == SYM_EQUALITY)
     return 1;
@@ -4094,6 +4125,10 @@ uint64_t is_comparison() {
   else if (symbol == SYM_LEQ)
     return 1;
   else if (symbol == SYM_GEQ)
+    return 1;
+  else if (symbol == SYM_L_BIT_SHIFT)
+    return 1;
+  else if (symbol == SYM_R_BIT_SHIFT)
     return 1;
   else
     return 0;
@@ -4956,7 +4991,26 @@ uint64_t compile_expression() {
 
       tfree(1);
 
-    } else if (operator_symbol == SYM_LEQ) {
+    }
+    // Assignent 2 
+
+    //   else if (operator_symbol == SYM_L_BIT_SHIFT) {
+    //   // a > b iff b < a
+    //   emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
+
+    //   tfree(1);
+
+    //  }
+
+    //   else if (operator_symbol == SYM_R_BIT_SHIFT) {
+    //   // a > b iff b < a
+    //   emit_sltu(previous_temporary(), current_temporary(), previous_temporary());
+
+    //   tfree(1);
+
+    //  }
+    
+     else if (operator_symbol == SYM_LEQ) {
       // a <= b iff 1 - (b < a)
       emit_sltu(previous_temporary(), current_temporary(), previous_temporary());
       emit_addi(current_temporary(), REG_ZR, 1);
@@ -5195,6 +5249,11 @@ void compile_statement() {
 
   // === Assignment 2 ===
   // We must check, just like done here with the other expression for our << and >> operators.
+  // 
+
+  if(symbol == SYM_L_BIT_SHIFT){
+    get_symbol();
+  }
 
   // 
 
