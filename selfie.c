@@ -533,6 +533,10 @@ void init_scanner () {
   *(SYMBOLS + SYM_L_BIT_SHIFT) = (uint64_t) "<<";
   *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
 
+  // ==== Assignment 3 ====
+
+
+
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -4863,6 +4867,9 @@ uint64_t compile_term() {
   // type of term is grammar attribute
   return ltype;
 }
+
+
+
 
 
 uint64_t compile_simple_expression() {
