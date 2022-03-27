@@ -717,7 +717,6 @@ uint64_t  compile_initialization(uint64_t type);
 void      compile_procedure(char* procedure, uint64_t type);
 void      compile_cstar();
 
-// === Assignment 2 ===
  
 
 
@@ -3810,13 +3809,17 @@ void get_symbol() {
 
         // Assignment 2 =====
 
+        // since we use here already the char_lt check
+        // we can check again if we got another char_lt
+        // which indicates that we are dealing with a bitwise shift "<<"" operator.
+        // the same approach is used for the right bitwise shift operator ">>" down below.
         if(character == CHAR_LT){
 
-
+        // set the symbol to our left shift
         symbol = SYM_L_BIT_SHIFT;
 
-                get_character();
-
+          // fetch the next character
+          get_character();
          }
 
         if (character == CHAR_EQUAL) {
@@ -3839,11 +3842,9 @@ void get_symbol() {
 
         // Assignment 2 =====
 
-
+        // Same as described above at "char_lt"
         if(character == CHAR_GT){
-
           get_character();
-
           symbol = SYM_R_BIT_SHIFT;
         }
 
@@ -4863,10 +4864,14 @@ uint64_t compile_term() {
   return ltype;
 }
 
+
 uint64_t compile_simple_expression() {
   uint64_t ltype;
   uint64_t operator_symbol;
   uint64_t rtype;
+
+
+
 
   // assert: n = allocated_temporaries
 
@@ -4992,23 +4997,23 @@ uint64_t compile_expression() {
       tfree(1);
 
     }
-    // Assignent 2 
+    // Assignent 3
 
-    //   else if (operator_symbol == SYM_L_BIT_SHIFT) {
-    //   // a > b iff b < a
-    //   emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
+      else if (operator_symbol == SYM_L_BIT_SHIFT) {
+      // a > b iff b < a
+      emit_sltu( current_temporary(), previous_temporary(), previous_temporary());
 
-    //   tfree(1);
+      tfree(1);
 
-    //  }
+     }
 
-    //   else if (operator_symbol == SYM_R_BIT_SHIFT) {
-    //   // a > b iff b < a
-    //   emit_sltu(previous_temporary(), current_temporary(), previous_temporary());
+      else if (operator_symbol == SYM_R_BIT_SHIFT) {
+      // a > b iff b < a
+      emit_sltu( current_temporary(), previous_temporary(), previous_temporary());
 
-    //   tfree(1);
+      tfree(1);
 
-    //  }
+     }
     
      else if (operator_symbol == SYM_LEQ) {
       // a <= b iff 1 - (b < a)
@@ -5247,9 +5252,6 @@ void compile_statement() {
       get_symbol();
   }
 
-  // === Assignment 2 ===
-  // We must check, just like done here with the other expression for our << and >> operators.
-  // 
 
   if(symbol == SYM_L_BIT_SHIFT){
     get_symbol();
