@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015-2021, the Selfie Project authors. All rights reserved.
+Copyright (c) the Selfie Project authors. All rights reserved.
 Please see the AUTHORS file for details. Use of this source code is
 governed by a BSD license that can be found in the LICENSE file.
 
@@ -506,7 +506,7 @@ void model_syscalls(uint64_t cursor_nid) {
         cursor_nid + 4, // nid of this line
         increment_nid); // nid of increment
 
-  if (IS64BITSYSTEM) {
+  if (IS64BITTARGET) {
     w = w
       + dprintf(output_fd, "%lu ite 2 %lu 94 %lu ; unsigned-extended 4-byte input if increment == 4\n",
           cursor_nid + 5, // nid of this line
@@ -870,7 +870,7 @@ void model_syscalls(uint64_t cursor_nid) {
   }
 
 
-  w = w + dprintf(output_fd, "\n%lu next 1 60 %lu ; update kernel-mode flag\n",
+  w = w + dprintf(output_fd, "\n%lu next 1 60 %lu ; updating kernel-mode flag\n",
     current_ecall_nid + pcs_nid / 10, // nid of this line
     kernel_mode_flow_nid);            // nid of most recent update of kernel-mode flag
 }
@@ -951,13 +951,16 @@ void model_data_flow_lui() {
     reset_bounds();
 
     w = w
-      + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX << 12\n", current_nid, left_shift(imm, 12), imm)
+      + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX << 12\n",
+        current_nid,                      // nid of this line
+        left_shift(imm, 12),              // signed immediate value left-shifted by 12 bits
+        sign_shrink(imm, WORDSIZEINBITS)) // immediate value in hexadecimal
 
       // if this instruction is active set $rd = imm << 12
       + dprintf(output_fd, "%lu ite 2 %lu %lu %lu ; ",
           current_nid + 1,        // nid of this line
           pc_nid(pcs_nid, pc),    // nid of pc flag of this instruction
-          current_nid,            // nid of immediate argument left-shifted by 12 bits
+          current_nid,            // nid of immediate value left-shifted by 12 bits
           *(reg_flow_nids + rd)); // nid of most recent update of $rd register
 
     *(reg_flow_nids + rd) = current_nid + 1;
@@ -979,7 +982,10 @@ void model_data_flow_addi() {
     if (imm == 0)
       result_nid = reg_nids + rs1;
     else {
-      w = w + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX\n", current_nid, imm, imm);
+      w = w + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX\n",
+        current_nid,                       // nid of this line
+        imm,                               // signed immediate value
+        sign_shrink(imm, WORDSIZEINBITS)); // immediate value in hexadecimal
 
       if (rs1 == REG_ZR) {
         result_nid = current_nid;
@@ -1012,12 +1018,11 @@ void model_data_flow_addi() {
 }
 
 void model_control_flow_addi() {
-  if (rd != REG_ZR)
+  if (rs1 == REG_ZR)
     if (imm != 0)
-      if (rs1 == REG_ZR)
-        if (rd == REG_A7)
-          // assert: next instruction is ecall
-          reg_a7 = imm;
+      if (rd == REG_A7)
+        // assert: next instruction is ecall
+        reg_a7 = imm;
 
   model_control_flow_lui_add_sub_mul_divu_remu_sltu_load_store();
 }
@@ -1706,7 +1711,10 @@ uint64_t model_virtual_address() {
     return reg_nids + rs1; // nid of current value of $rs1 register
   else {
     w = w
-      + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX\n", current_nid, imm, imm)
+      + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX\n",
+          current_nid,                      // nid of this line
+          imm,                              // signed immediate value
+          sign_shrink(imm, WORDSIZEINBITS)) // immediate value in hexadecimal
 
       // compute $rs1 + imm
       + dprintf(output_fd, "%lu add 2 %lu %lu\n",
@@ -2556,7 +2564,7 @@ void beator(uint64_t entry_pc) {
     + dprintf(output_fd, "10 zero 1\n11 one 1\n\n")
     + dprintf(output_fd, "20 zero 2\n21 one 2\n22 constd 2 2\n23 constd 2 3\n24 constd 2 4\n");
 
-  if (IS64BITSYSTEM)
+  if (IS64BITTARGET)
     w = w + dprintf(output_fd, "25 constd 2 5\n26 constd 2 6\n27 constd 2 7\n28 constd 2 8\n");
 
   w = w
@@ -2630,7 +2638,7 @@ void beator(uint64_t entry_pc) {
     + dprintf(output_fd, "72 sort bitvec 16 ; 2 bytes\n")
     + dprintf(output_fd, "73 sort bitvec 24 ; 3 bytes\n");
 
-  if (IS64BITSYSTEM)
+  if (IS64BITTARGET)
     w = w
       + dprintf(output_fd, "74 sort bitvec 32 ; 4 bytes\n")
       + dprintf(output_fd, "75 sort bitvec 40 ; 5 bytes\n")
@@ -2642,7 +2650,7 @@ void beator(uint64_t entry_pc) {
     + dprintf(output_fd, "82 input 72 2-byte-input\n")
     + dprintf(output_fd, "83 input 73 3-byte-input\n");
 
-  if (IS64BITSYSTEM)
+  if (IS64BITTARGET)
     w = w
       + dprintf(output_fd, "84 input 74 4-byte-input\n")
       + dprintf(output_fd, "85 input 75 5-byte-input\n")
@@ -2674,11 +2682,11 @@ void beator(uint64_t entry_pc) {
     if (i == 0)
       w = w + dprintf(output_fd, "\n");
     else if (*(registers + i) != 0)
-      w = w + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX for %s\n",
-        reg_value_nids + i,    // nid of this line
-        *(registers + i),      // initial value with sign
-        *(registers + i),      // initial value in hexadecimal as comment
-        get_register_name(i)); // register name as comment
+      w = w + dprintf(output_fd, "%lu constd 2 %lu ; 0x%lX for %s\n",
+        reg_value_nids + i,                            // nid of this line
+        sign_shrink(*(registers + i), WORDSIZEINBITS), // unsigned initial value
+        *(registers + i),                              // initial value in hexadecimal as comment
+        get_register_name(i));                         // register name as comment
 
     i = i + 1;
   }
@@ -2748,12 +2756,12 @@ void beator(uint64_t entry_pc) {
         reg_nids + i,          // nid of to-be-initialized register
         get_register_name(i)); // register name as comment
     else
-      w = w + dprintf(output_fd, "%lu init 2 %lu %lu %s ; initial value is %ld\n",
-        reg_init_nids + i,    // nid of this line
-        reg_nids + i,         // nid of to-be-initialized register
-        reg_value_nids + i,   // nid of initial value
-        get_register_name(i), // register name as comment
-        *(registers + i));    // initial value with sign
+      w = w + dprintf(output_fd, "%lu init 2 %lu %lu %s ; initial value is %lu\n",
+        reg_init_nids + i,                              // nid of this line
+        reg_nids + i,                                   // nid of to-be-initialized register
+        reg_value_nids + i,                             // nid of unsigned initial value
+        get_register_name(i),                           // register name as comment
+        sign_shrink(*(registers + i), WORDSIZEINBITS)); // unsigned initial value
 
     i = i + 1;
   }
@@ -2911,7 +2919,7 @@ void beator(uint64_t entry_pc) {
       // load non-zero memory word, use sign
       if (RAM + MMURAM > 0) {
         w = w
-          + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX\n",
+          + dprintf(output_fd, "%lu constd 2 %lu ; 0x%lX word\n",
               current_nid + 1,          // nid of this line
               memory_word, memory_word) // value of memory word at current address
           // implementing memory word as state variable, after constd for paddr
@@ -2930,7 +2938,7 @@ void beator(uint64_t entry_pc) {
         data_flow_nid = current_nid + 4;
       } else {
         w = w
-          + dprintf(output_fd, "%lu constd 2 %ld ; 0x%lX\n",
+          + dprintf(output_fd, "%lu constd 2 %lu ; 0x%lX word\n",
               current_nid + 1,          // nid of this line
               memory_word, memory_word) // value of memory word at current address
           + dprintf(output_fd, "%lu write %lu %lu %lu %lu\n",
@@ -3241,9 +3249,11 @@ void beator(uint64_t entry_pc) {
 
     generate_address_alignment_check(access_flow_start_nid);
 
-    w = w + dprintf(output_fd, "; is end address of memory access word-aligned?\n\n");
+    if (check_block_access) {
+      w = w + dprintf(output_fd, "; is end address of memory access word-aligned?\n\n");
 
-    generate_address_alignment_check(access_flow_end_nid);
+      generate_address_alignment_check(access_flow_end_nid);
+    }
   }
 
   if (segmentation_faults) {
@@ -3253,9 +3263,11 @@ void beator(uint64_t entry_pc) {
 
     generate_segmentation_faults(access_flow_start_nid);
 
-    w = w + dprintf(output_fd, "; is end address of memory access in a valid segment?\n\n");
+    if (check_block_access) {
+      w = w + dprintf(output_fd, "; is end address of memory access in a valid segment?\n\n");
 
-    generate_segmentation_faults(access_flow_end_nid);
+      generate_segmentation_faults(access_flow_end_nid);
+    }
   }
 
   if (check_block_access) {
@@ -3292,7 +3304,7 @@ uint64_t selfie_model() {
   RAM_option                  = "--RAM";
   MMURAM_option               = "--MMURAM";
 
-  if (IS64BITSYSTEM == 0) {
+  if (IS64BITTARGET == 0) {
     // assert: 32-bit system
     vaddr_mask_nid  = 23;
     vaddr_alignment = 2;
@@ -3495,8 +3507,8 @@ int main(int argc, char** argv) {
   init_selfie((uint64_t) argc, (uint64_t*) argv);
 
   init_library();
-
   init_system();
+  init_target();
 
   exit_code = selfie(1);
 
