@@ -4831,37 +4831,8 @@ uint64_t compile_factor() {
 }
 
 
-// ==== Assignment 3 ====
+// ==== Assignment 3 testing ====
 
-uint64_t compile_shift_expression(){
-  uint64_t ltype;
-  uint64_t operator_symbol;
-  uint64_t rtype;
-
-
-
-  ltype = compile_simple_expression();
-
-
-  if(symbol == SYM_L_BIT_SHIFT || symbol == SYM_R_BIT_SHIFT){
-
-    operator_symbol = symbol;
-
-    getSymbol();
-
-
-    rtype = compile_simple_expression();
-
-    if(operator_symbol == SYM_L_BIT_SHIFT){
-        emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
-        tfree(1);
-    }
-  }
-  
-
-
-
-}
 
 uint64_t compile_term() {
   uint64_t ltype;
