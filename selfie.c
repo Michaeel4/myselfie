@@ -11928,6 +11928,7 @@ void print_synopsis(char* extras) {
 // ----------------------------- SELFIE ----------------------------
 // -----------------------------------------------------------------
 
+
 uint64_t selfie(uint64_t extras) {
   printf("%s: This is Michael Lenort's Selfie!\n", selfie_name);
 
