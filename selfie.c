@@ -535,6 +535,8 @@ void init_scanner () {
 
   // ==== Assignment 3 ====
 
+  
+
 
 
 
@@ -4828,6 +4830,39 @@ uint64_t compile_factor() {
     return type;
 }
 
+
+// ==== Assignment 3 ====
+
+uint64_t compile_shift_expression(){
+  uint64_t ltype;
+  uint64_t operator_symbol;
+  uint64_t rtype;
+
+
+
+  ltype = compile_simple_expression();
+
+
+  if(symbol == SYM_L_BIT_SHIFT || symbol == SYM_R_BIT_SHIFT){
+
+    operator_symbol = symbol;
+
+    getSymbol();
+
+
+    rtype = compile_simple_expression();
+
+    if(operator_symbol == SYM_L_BIT_SHIFT){
+        emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
+        tfree(1);
+    }
+  }
+  
+
+
+
+}
+
 uint64_t compile_term() {
   uint64_t ltype;
   uint64_t operator_symbol;
@@ -5007,8 +5042,7 @@ uint64_t compile_expression() {
     // Assignent 3
 
       else if (operator_symbol == SYM_L_BIT_SHIFT) {
-      // a > b iff b < a
-      emit_sltu( current_temporary(), previous_temporary(), previous_temporary());
+      emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
 
       tfree(1);
 
@@ -5016,7 +5050,7 @@ uint64_t compile_expression() {
 
       else if (operator_symbol == SYM_R_BIT_SHIFT) {
       // a > b iff b < a
-      emit_sltu( current_temporary(), previous_temporary(), previous_temporary());
+      emit_sltu(previous_temporary(), current_temporary(), previous_temporary());
 
       tfree(1);
 
