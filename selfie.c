@@ -1859,8 +1859,8 @@ void init_disassembler() {
 
 
   // Assignment 3
-  *(MNEMONICS + SLTU)  = (uint64_t) "sll";
-  *(MNEMONICS + SLTU)  = (uint64_t) "srl";
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
 
 
   reset_disassembler();
@@ -6951,7 +6951,7 @@ uint64_t get_total_number_of_instructions() {
 // ====
 
 uint64_t get_total_number_of_nops() {
-  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_divu + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
+  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_sll + nopc_srl + nopc_divu + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
 }
 
 void print_instruction_counter(uint64_t counter, uint64_t ins) {
@@ -7131,12 +7131,12 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
 
 // ==== Assignment 3 ====
 void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
-  emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F7_SLL, rd, OP_OP));
+  emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F3_SLL, rd, OP_OP));
   ic_sll = ic_sll + 1;
 }
 
 void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
-  emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F7_SRL, rd, OP_OP));
+  emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F3_SRL, rd, OP_OP));
   ic_srl = ic_srl + 1;
 }
 
@@ -9527,21 +9527,55 @@ void do_lui() {
 // Assignment 3 ====
 
   void do_sll() {
-  if (rd != REG_ZR)
+  uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
     // semantics of left shift
-    *(registers + rd) = *(registers + rs1) << *(registers + rs2);
+
+    if (rd != REG_ZR) {
+    // semantics of sub
+    next_rd_value = *(registers + rs1) << *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_sll = nopc_sll + 1;
+  } 
 
   pc = pc + INSTRUCTIONSIZE;
+
+  write_register(rd);
 
   ic_sll = ic_sll + 1;
 }
 
 void do_srl() {
-  if (rd != REG_ZR)
+
+  uint64_t next_rd_value;
+  read_register(rs1);
+  read_register(rs2);
     // semantics of right shift
-    *(registers + rd) = *(registers + rs1) >> *(registers + rs2);
+    // semantics of left shift
+
+    if (rd != REG_ZR) {
+    // semantics of sub
+    next_rd_value = *(registers + rs1) >> *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_srl = nopc_srl + 1;
+  } 
+
+
+
+
 
   pc = pc + INSTRUCTIONSIZE;
+
+  write_register(rd);
 
   ic_srl = ic_srl + 1;
 }
@@ -10519,8 +10553,6 @@ void decode() {
     } else if (funct3 == F3_DIVU) {
       if (funct7 == F7_DIVU)
         is = DIVU;
-      else if (funct7 == F7_SRL) // Assignment 3 ====
-        is = SRL;
     } else if (funct3 == F3_REMU) {
       if (funct7 == F7_REMU)
         is = REMU;
@@ -10531,6 +10563,10 @@ void decode() {
     else if (funct3 == F3_SLL) {
       if (funct7 == F7_SLL)
         is = SLL;
+    }
+    else if(funct3 == F3_SRL){
+      if(funct7 == F7_SRL)
+        is = SRL;
     }
   } else if (opcode == OP_BRANCH) {
     decode_b_format();
