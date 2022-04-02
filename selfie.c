@@ -1751,6 +1751,12 @@ void do_mul();
 void do_divu();
 void do_remu();
 
+// Assignment3
+void do_sll();
+void do_srl();
+
+
+
 void do_sltu();
 
 uint64_t print_load();
@@ -5138,7 +5144,7 @@ uint64_t is_bitshift(){
     return 1;
   else if(symbol == SYM_R_BIT_SHIFT)
     return 1;
-  else 0;
+  return 0;
 }
 
 uint64_t compile_shift_expression(){
@@ -5154,7 +5160,7 @@ uint64_t compile_shift_expression(){
   // assert: allocated_temporaries == n + 1
 
   // * / or % ?
-  while (is_bitshift())) {
+  while (is_bitshift()) {
     operator_symbol = symbol;
 
     get_symbol();
@@ -5274,6 +5280,7 @@ uint64_t compile_expression() {
   uint64_t rtype;
 
   // assert: n = allocated_temporaries
+// === Assignment 3 
 
   ltype = compile_shift_expression();
 
@@ -5284,6 +5291,7 @@ uint64_t compile_expression() {
     operator_symbol = symbol;
 
     get_symbol();
+// === Assignment 3 
 
     rtype = compile_shift_expression();
 
@@ -6926,12 +6934,15 @@ void decode_u_format() {
 // ---------------------------- BINARY -----------------------------
 // -----------------------------------------------------------------
 
+
+// Assignment 3
 uint64_t get_total_number_of_instructions() {
-  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
+  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_sll + ic_srl +  ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
 }
 
+// Assignment 3
 uint64_t get_total_number_of_nops() {
-  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_divu + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
+  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_divu + nopc_sll+ nopc_srl + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
 }
 
 void print_instruction_counter(uint64_t counter, uint64_t ins) {
@@ -7107,6 +7118,20 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
 
   ic_add = ic_add + 1;
 }
+
+// Assignment 3
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F3_SLL, rd, OP_OP));
+
+  ic_sll = ic_sll + 1;
+}
+
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F3_SRL, rd, OP_OP));
+
+  ic_srl = ic_srl + 1;
+}
+
 
 void emit_sub(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_SUB, rs2, rs1, F3_SUB, rd, OP_OP));
@@ -9581,6 +9606,11 @@ void do_add() {
 
   ic_add = ic_add + 1;
 }
+
+// Assignment 3
+
+
+
 
 void do_sub() {
   uint64_t next_rd_value;
