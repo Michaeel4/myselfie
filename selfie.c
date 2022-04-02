@@ -548,6 +548,9 @@ void init_scanner () {
 
   // ==== Assignment 3 ====
 
+
+
+
   
 
 
@@ -996,6 +999,12 @@ uint64_t F3_BEQ   = 0; // 000
 uint64_t F3_JALR  = 0; // 000
 uint64_t F3_ECALL = 0; // 000
 
+// Assignment 3 =====
+
+uint64_t F3_SLL   = 1; // 001
+uint64_t F3_SRL   = 5; // 101
+// =================
+
 // f7-codes
 uint64_t F7_ADD  = 0;  // 0000000
 uint64_t F7_MUL  = 1;  // 0000001
@@ -1003,6 +1012,13 @@ uint64_t F7_SUB  = 32; // 0100000
 uint64_t F7_DIVU = 1;  // 0000001
 uint64_t F7_REMU = 1;  // 0000001
 uint64_t F7_SLTU = 0;  // 0000000
+
+// ==== Assignment 3 ====
+
+uint64_t F7_SLL = 0;
+uint64_t F7_SRL = 0;
+
+// ======================
 
 // f12-codes (immediates)
 uint64_t F12_ECALL = 0; // 000000000000
@@ -1060,6 +1076,13 @@ void emit_mul(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_divu(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_remu(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_sltu(uint64_t rd, uint64_t rs1, uint64_t rs2);
+
+// Assignment 3 == 
+// i suppose we need our own emit
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2);
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2);
+
+// ====
 
 void emit_load(uint64_t rd, uint64_t rs1, uint64_t immediate);
 void emit_store(uint64_t rs1, uint64_t immediate, uint64_t rs2);
@@ -1182,6 +1205,12 @@ uint64_t ic_jal   = 0;
 uint64_t ic_jalr  = 0;
 uint64_t ic_ecall = 0;
 
+// Assignment 3 ====
+uint64_t ic_sll = 0;
+uint64_t ic_srl = 0;
+
+// =================
+
 char* binary_name = (char*) 0; // file name of binary
 
 uint64_t* ELF_header = (uint64_t*) 0;
@@ -1229,6 +1258,12 @@ void reset_instruction_counters() {
   ic_jal   = 0;
   ic_jalr  = 0;
   ic_ecall = 0;
+  
+  // Assignment 3 ===
+  
+  ic_sll = 0;
+  ic_srl = 0;
+  // ================
 }
 
 // -----------------------------------------------------------------
@@ -1781,6 +1816,12 @@ uint64_t BEQ   = 11;
 uint64_t JAL   = 12;
 uint64_t JALR  = 13;
 uint64_t ECALL = 14;
+
+
+// Assignment 3 ====
+uint64_t SLL = 15;
+uint64_t SRL = 16;
+// =================
 
 uint64_t* MNEMONICS; // assembly mnemonics of instructions
 
@@ -2607,6 +2648,10 @@ uint64_t log_ten(uint64_t n) {
   else
     return log_ten(n / 10) + 1;
 }
+
+// Assignment 3 // NOTES //
+// own notes for me and by me (Michael Lenort) // 
+// this might be useful for the Assignment
 
 uint64_t left_shift(uint64_t n, uint64_t b) {
   // assert: 0 <= b < SIZEOFUINT64INBITS
@@ -5036,7 +5081,81 @@ uint64_t compile_factor() {
 }
 
 
+// === Testing for Assignment 3 ====
+
+uint64_t is_shift(){
+  if(symbol == SYM_L_BIT_SHIFT)
+    return 1;
+  if(symbol == SYM_R_BIT_SHIFT)
+    return 1;
+  else
+    return 0;
+}
+
 // ==== Assignment 3 testing ====
+uint64_t compile_shift_expression() {
+  uint64_t ltype;
+  uint64_t operator_symbol;
+  uint64_t rtype;
+
+  // assert: n = allocated_temporaries
+
+  ltype = compile_simple_expression();
+
+  // assert: allocated_temporaries == n + 1
+
+  // * / or % ?
+  while (is_shift()) {
+    operator_symbol = symbol;
+
+    get_symbol();
+
+    rtype = compile_simple_expression();
+
+    // assert: allocated_temporaries == n + 2
+
+    if (ltype != rtype)
+      type_warning(ltype, rtype);
+
+    if (operator_symbol == SYM_L_BIT_SHIFT){
+      if (ltype == UINT64_T) {
+        if (rtype == UINT64STAR_T) {
+          // UINT64_T << UINT64STAR_T
+          syntax_error_message("(uint64_t) << (uint64_t*) is undefined");
+        }
+      } else if (rtype == UINT64STAR_T)
+        // UINT64STAR_T << UINT64STAR_T
+        syntax_error_message("(uint64_t*) << (uint64_t*) is undefined");
+        else
+        // UINT64STAR_T << UINT64_T
+        syntax_error_message("(uint64_t*) << (uint64_t) is undefined");
+
+      emit_sll(previous_temporary(), previous_temporary(), current_temporary());    
+      
+      }else if (operator_symbol ==  SYM_R_BIT_SHIFT){
+        
+      if (ltype == UINT64_T) {
+        if (rtype == UINT64STAR_T) {
+          // UINT64_T >> UINT64STAR_T
+          syntax_error_message("(uint64_t) >> (uint64_t*) is undefined");
+        }
+      } else if (rtype == UINT64STAR_T)
+        // UINT64STAR_T >> UINT64STAR_T
+        syntax_error_message("(uint64_t*) >> (uint64_t*) is undefined");
+        else
+        // UINT64STAR_T << UINT64_T
+        syntax_error_message("(uint64_t*) >> (uint64_t) is undefined");
+
+      emit_srl(previous_temporary(), previous_temporary(), current_temporary());
+    }   
+     
+    tfree(1);
+  }
+  return ltype;
+}
+
+
+
 
 
 uint64_t compile_term() {
@@ -5171,6 +5290,12 @@ uint64_t compile_expression() {
   // assert: allocated_temporaries == n + 1
 
   //optional: ==, !=, <, >, <=, >= simple_expression
+
+
+  // Assignment 3 Notes by me (Michael Lenort):
+
+  // since we use is_comparison to check whetever we are dealing with a bitshift or not
+  // we could make use of this 
   if (is_comparison()) {
     operator_symbol = symbol;
 
@@ -5218,6 +5343,15 @@ uint64_t compile_expression() {
     // Assignent 3
 
       else if (operator_symbol == SYM_L_BIT_SHIFT) {
+
+          if (ltype == UINT64STAR_T) {
+            if (rtype == UINT64_T){
+
+                
+
+            }
+
+           }
       emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
 
       tfree(1);
@@ -6817,9 +6951,14 @@ void decode_u_format() {
 // ---------------------------- BINARY -----------------------------
 // -----------------------------------------------------------------
 
+
+// Assignment 3 ====
 uint64_t get_total_number_of_instructions() {
-  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
+  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_sll + ic_srl + ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
 }
+
+
+// ====
 
 uint64_t get_total_number_of_nops() {
   return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_divu + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
@@ -6998,6 +7137,20 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
 
   ic_add = ic_add + 1;
 }
+
+
+// ==== Assignment 3 ====
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F7_SLL, rd, OP_OP));
+  ic_sll = ic_sll + 1;
+}
+
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F7_SRL, rd, OP_OP));
+  ic_srl = ic_srl + 1;
+}
+
+// ======================
 
 void emit_sub(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_SUB, rs2, rs1, F3_SUB, rd, OP_OP));
@@ -9381,6 +9534,30 @@ void do_lui() {
   ic_lui = ic_lui + 1;
 }
 
+// Assignment 3 ====
+
+  void do_sll() {
+  if (rd != REG_ZR)
+    // semantics of left shift
+    *(registers + rd) = *(registers + rs1) << *(registers + rs2);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_sll = ic_sll + 1;
+}
+
+void do_srl() {
+  if (rd != REG_ZR)
+    // semantics of right shift
+    *(registers + rd) = *(registers + rs1) >> *(registers + rs2);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_srl = ic_srl + 1;
+}
+
+// =================
+
 void undo_lui_addi_add_sub_mul_divu_remu_sltu_load_jal_jalr() {
   *(registers + rd) = *(values + (tc % MAX_REPLAY_LENGTH));
 }
@@ -10352,12 +10529,18 @@ void decode() {
     } else if (funct3 == F3_DIVU) {
       if (funct7 == F7_DIVU)
         is = DIVU;
+      else if (funct7 == F7_SRL) // Assignment 3 ====
+        is = SRL;
     } else if (funct3 == F3_REMU) {
       if (funct7 == F7_REMU)
         is = REMU;
     } else if (funct3 == F3_SLTU) {
       if (funct7 == F7_SLTU)
         is = SLTU;
+    }
+    else if (funct3 == F3_SLL) {
+      if (funct7 == F7_SLL)
+        is = SLL;
     }
   } else if (opcode == OP_BRANCH) {
     decode_b_format();
@@ -10440,6 +10623,12 @@ void execute() {
     do_lui();
   else if (is == ECALL)
     do_ecall();
+  // ==== Assignment 3 =====
+  else if(is == SLL)
+    do_sll();
+  else if(is == SRL)
+    do_srl();
+  // =======================
 }
 
 void execute_record() {
