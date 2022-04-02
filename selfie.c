@@ -6937,12 +6937,12 @@ void decode_u_format() {
 
 // Assignment 3
 uint64_t get_total_number_of_instructions() {
-  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_sll + ic_srl +  ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
+  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_sll + ic_srl + ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
 }
 
 // Assignment 3
 uint64_t get_total_number_of_nops() {
-  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_divu + nopc_sll+ nopc_srl + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
+  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_divu + nopc_sll + nopc_srl + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
 }
 
 void print_instruction_counter(uint64_t counter, uint64_t ins) {
@@ -9608,6 +9608,7 @@ void do_add() {
 }
 
 // Assignment 3
+
 
 
 
