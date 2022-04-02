@@ -996,6 +996,11 @@ uint64_t F3_BEQ   = 0; // 000
 uint64_t F3_JALR  = 0; // 000
 uint64_t F3_ECALL = 0; // 000
 
+// === Assignment 3
+
+uint64_t F3_SLL = 1;
+uint64_T F3_SRL = 5;
+
 // f7-codes
 uint64_t F7_ADD  = 0;  // 0000000
 uint64_t F7_MUL  = 1;  // 0000001
@@ -1003,6 +1008,11 @@ uint64_t F7_SUB  = 32; // 0100000
 uint64_t F7_DIVU = 1;  // 0000001
 uint64_t F7_REMU = 1;  // 0000001
 uint64_t F7_SLTU = 0;  // 0000000
+
+// === Assignment 3
+
+uint64_t F7_SLL = 0;
+uint64_t F7_SRL = 0;
 
 // f12-codes (immediates)
 uint64_t F12_ECALL = 0; // 000000000000
@@ -1060,6 +1070,13 @@ void emit_mul(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_divu(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_remu(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_sltu(uint64_t rd, uint64_t rs1, uint64_t rs2);
+
+
+// Assignment 3
+
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2);
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2);
+
 
 void emit_load(uint64_t rd, uint64_t rs1, uint64_t immediate);
 void emit_store(uint64_t rs1, uint64_t immediate, uint64_t rs2);
@@ -1182,6 +1199,12 @@ uint64_t ic_jal   = 0;
 uint64_t ic_jalr  = 0;
 uint64_t ic_ecall = 0;
 
+// == Assignment 3
+uint64_t ic_sll  = 0;
+uint64_t ic_srl  = 0;
+
+
+
 char* binary_name = (char*) 0; // file name of binary
 
 uint64_t* ELF_header = (uint64_t*) 0;
@@ -1229,6 +1252,10 @@ void reset_instruction_counters() {
   ic_jal   = 0;
   ic_jalr  = 0;
   ic_ecall = 0;
+
+  // == Assignment 3
+  ic_sll = 0;
+  ic_srl = 0;
 }
 
 // -----------------------------------------------------------------
@@ -1781,6 +1808,11 @@ uint64_t BEQ   = 11;
 uint64_t JAL   = 12;
 uint64_t JALR  = 13;
 uint64_t ECALL = 14;
+
+// Assignment 3
+uint64_t SLL = 15;
+uint64_t SRL = 16;
+
 
 uint64_t* MNEMONICS; // assembly mnemonics of instructions
 
@@ -5079,6 +5111,63 @@ uint64_t compile_term() {
   return ltype;
 }
 
+// == Assignment 3
+
+
+uint64_t is_bitshift(){
+  if(symbol == SYM_L_BIT_SHIFT)
+    return 1;
+  else if(symbol == SYM_R_BIT_SHIFT)
+    return 1;
+  else 0;
+}
+
+uint64_t compile_shift_expression(){
+
+  uint64_t ltype;
+  uint64_t operator_symbol;
+  uint64_t rtype;
+
+  // assert: n = allocated_temporaries
+
+  ltype = compile_simple_expression();
+
+  // assert: allocated_temporaries == n + 1
+
+  // * / or % ?
+  while (is_bitshift())) {
+    operator_symbol = symbol;
+
+    get_symbol();
+
+    rtype = compile_simple_expression();
+
+    // assert: allocated_temporaries == n + 2
+
+    if (ltype != rtype)
+      type_warning(ltype, rtype);
+
+
+      if(operator_symbol == SYM_L_BIT_SHIFT){
+
+        emit_sll(previous_temporary(), previous_temporary(), current_temporary());
+      } else if(operator_symbol == SYM_R_BIT_SHIFT){
+
+        emit_srl(previous_temporary(), previous_temporary(), current_temporary());
+      }
+
+    tfree(1);
+  }
+
+  // assert: allocated_temporaries == n + 1
+
+  // type of term is grammar attribute
+  return ltype;
+}
+
+
+// ===========
+
 
 
 
@@ -5159,6 +5248,7 @@ uint64_t compile_simple_expression() {
   return ltype;
 }
 
+// === Assignment 3 
 uint64_t compile_expression() {
   uint64_t ltype;
   uint64_t operator_symbol;
@@ -5166,7 +5256,7 @@ uint64_t compile_expression() {
 
   // assert: n = allocated_temporaries
 
-  ltype = compile_simple_expression();
+  ltype = compile_shift_expression();
 
   // assert: allocated_temporaries == n + 1
 
@@ -5176,7 +5266,7 @@ uint64_t compile_expression() {
 
     get_symbol();
 
-    rtype = compile_simple_expression();
+    rtype = compile_shift_expression();
 
     // assert: allocated_temporaries == n + 2
 
