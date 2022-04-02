@@ -5117,7 +5117,7 @@ uint64_t compile_shift_expression() {
     if (ltype != rtype)
       type_warning(ltype, rtype);
 
-    if (operator_symbol == SYM_L_BIT_SHIFT){
+    if (operator_symbol == SYM_L_BIT_SHIFT) {
       if (ltype == UINT64_T) {
         if (rtype == UINT64STAR_T) {
           // UINT64_T << UINT64STAR_T
@@ -5126,14 +5126,13 @@ uint64_t compile_shift_expression() {
       } else if (rtype == UINT64STAR_T)
         // UINT64STAR_T << UINT64STAR_T
         syntax_error_message("(uint64_t*) << (uint64_t*) is undefined");
-        else
+      else
         // UINT64STAR_T << UINT64_T
         syntax_error_message("(uint64_t*) << (uint64_t) is undefined");
 
-      emit_sll(previous_temporary(), previous_temporary(), current_temporary());    
-      
-      }else if (operator_symbol ==  SYM_R_BIT_SHIFT){
-        
+      emit_sll(previous_temporary(), previous_temporary(), current_temporary());
+
+    } else if (operator_symbol == SYM_R_BIT_SHIFT) {
       if (ltype == UINT64_T) {
         if (rtype == UINT64STAR_T) {
           // UINT64_T >> UINT64STAR_T
@@ -5142,13 +5141,13 @@ uint64_t compile_shift_expression() {
       } else if (rtype == UINT64STAR_T)
         // UINT64STAR_T >> UINT64STAR_T
         syntax_error_message("(uint64_t*) >> (uint64_t*) is undefined");
-        else
+      else
         // UINT64STAR_T << UINT64_T
         syntax_error_message("(uint64_t*) >> (uint64_t) is undefined");
 
       emit_srl(previous_temporary(), previous_temporary(), current_temporary());
-    }   
-     
+    }
+
     tfree(1);
   }
   return ltype;
@@ -5285,7 +5284,7 @@ uint64_t compile_expression() {
 
   // assert: n = allocated_temporaries
 
-  ltype = compile_simple_expression();
+  ltype = compile_shift_expression();
 
   // assert: allocated_temporaries == n + 1
 
@@ -5301,7 +5300,7 @@ uint64_t compile_expression() {
 
     get_symbol();
 
-    rtype = compile_simple_expression();
+    rtype = compile_shift_expression();
 
     // assert: allocated_temporaries == n + 2
 
@@ -5339,33 +5338,7 @@ uint64_t compile_expression() {
 
       tfree(1);
 
-    }
-    // Assignent 3
-
-      else if (operator_symbol == SYM_L_BIT_SHIFT) {
-
-          if (ltype == UINT64STAR_T) {
-            if (rtype == UINT64_T){
-
-                
-
-            }
-
-           }
-      emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
-
-      tfree(1);
-
-     }
-
-      else if (operator_symbol == SYM_R_BIT_SHIFT) {
-      // a > b iff b < a
-      emit_sltu(previous_temporary(), current_temporary(), previous_temporary());
-
-      tfree(1);
-
-     }
-    
+    }    
      else if (operator_symbol == SYM_LEQ) {
       // a <= b iff 1 - (b < a)
       emit_sltu(previous_temporary(), current_temporary(), previous_temporary());
