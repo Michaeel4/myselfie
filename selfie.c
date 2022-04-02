@@ -1857,6 +1857,12 @@ void init_disassembler() {
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
 
+
+  // Assignment 3
+  *(MNEMONICS + SLTU)  = (uint64_t) "sll";
+  *(MNEMONICS + SLTU)  = (uint64_t) "srl";
+
+
   reset_disassembler();
 
   *(MNEMONICS + BEQ)   = (uint64_t) "beq";
@@ -2016,6 +2022,12 @@ uint64_t trap  = 0; // flag for creating a trap
 uint64_t nopc_lui   = 0;
 uint64_t nopc_addi  = 0;
 uint64_t nopc_add   = 0;
+
+// Assignment 3
+uint64_t nopc_sll   = 0;
+uint64_t nopc_srl   = 0;
+
+
 uint64_t nopc_sub   = 0;
 uint64_t nopc_mul   = 0;
 uint64_t nopc_divu  = 0;
@@ -2098,6 +2110,11 @@ void reset_nop_counters() {
   nopc_lui   = 0;
   nopc_addi  = 0;
   nopc_add   = 0;
+
+  // Assignment 3
+  nopc_sll   = 0;
+  nopc_srl   = 0;
+
   nopc_sub   = 0;
   nopc_mul   = 0;
   nopc_divu  = 0;
@@ -5118,32 +5135,32 @@ uint64_t compile_shift_expression() {
       type_warning(ltype, rtype);
 
     if (operator_symbol == SYM_L_BIT_SHIFT) {
-      if (ltype == UINT64_T) {
-        if (rtype == UINT64STAR_T) {
-          // UINT64_T << UINT64STAR_T
-          syntax_error_message("(uint64_t) << (uint64_t*) is undefined");
-        }
-      } else if (rtype == UINT64STAR_T)
-        // UINT64STAR_T << UINT64STAR_T
-        syntax_error_message("(uint64_t*) << (uint64_t*) is undefined");
-      else
-        // UINT64STAR_T << UINT64_T
-        syntax_error_message("(uint64_t*) << (uint64_t) is undefined");
+      // if (ltype == UINT64_T) {
+      //   if (rtype == UINT64STAR_T) {
+      //     // UINT64_T << UINT64STAR_T
+      //     syntax_error_message("(uint64_t) << (uint64_t*) is undefined");
+      //   }
+      // } else if (rtype == UINT64STAR_T)
+      //   // UINT64STAR_T << UINT64STAR_T
+      //   syntax_error_message("(uint64_t*) << (uint64_t*) is undefined");
+      // else
+      //   // UINT64STAR_T << UINT64_T
+      //   syntax_error_message("(uint64_t*) << (uint64_t) is undefined");
 
       emit_sll(previous_temporary(), previous_temporary(), current_temporary());
 
     } else if (operator_symbol == SYM_R_BIT_SHIFT) {
-      if (ltype == UINT64_T) {
-        if (rtype == UINT64STAR_T) {
-          // UINT64_T >> UINT64STAR_T
-          syntax_error_message("(uint64_t) >> (uint64_t*) is undefined");
-        }
-      } else if (rtype == UINT64STAR_T)
-        // UINT64STAR_T >> UINT64STAR_T
-        syntax_error_message("(uint64_t*) >> (uint64_t*) is undefined");
-      else
-        // UINT64STAR_T << UINT64_T
-        syntax_error_message("(uint64_t*) >> (uint64_t) is undefined");
+      // if (ltype == UINT64_T) {
+      //   if (rtype == UINT64STAR_T) {
+      //     // UINT64_T >> UINT64STAR_T
+      //     syntax_error_message("(uint64_t) >> (uint64_t*) is undefined");
+      //   }
+      // } else if (rtype == UINT64STAR_T)
+      //   // UINT64STAR_T >> UINT64STAR_T
+      //   syntax_error_message("(uint64_t*) >> (uint64_t*) is undefined");
+      // else
+      //   // UINT64STAR_T << UINT64_T
+      //   syntax_error_message("(uint64_t*) >> (uint64_t) is undefined");
 
       emit_srl(previous_temporary(), previous_temporary(), current_temporary());
     }
