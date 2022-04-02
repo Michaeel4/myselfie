@@ -999,7 +999,7 @@ uint64_t F3_ECALL = 0; // 000
 // === Assignment 3
 
 uint64_t F3_SLL = 1;
-uint64_T F3_SRL = 5;
+uint64_t F3_SRL = 5;
 
 // f7-codes
 uint64_t F7_ADD  = 0;  // 0000000
@@ -1848,12 +1848,20 @@ void init_disassembler() {
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
 
+  // Assignment 3
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
+
+
+
   reset_disassembler();
 
   *(MNEMONICS + BEQ)   = (uint64_t) "beq";
   *(MNEMONICS + JAL)   = (uint64_t) "jal";
   *(MNEMONICS + JALR)  = (uint64_t) "jalr";
   *(MNEMONICS + ECALL) = (uint64_t) "ecall";
+
+  
 }
 
 void reset_disassembler() {
@@ -2018,6 +2026,12 @@ uint64_t nopc_beq   = 0;
 uint64_t nopc_jal   = 0;
 uint64_t nopc_jalr  = 0;
 
+// Assignment 3
+
+uint64_t nopc_sll  = 0;
+uint64_t nopc_srl  = 0;
+
+
 // source profile
 
 uint64_t  calls               = 0;             // total number of executed procedure calls
@@ -2099,6 +2113,11 @@ void reset_nop_counters() {
   nopc_beq   = 0;
   nopc_jal   = 0;
   nopc_jalr  = 0;
+  // Assignment 3
+
+  nopc_sll  = 0;
+  nopc_srl  = 0;
+
 }
 
 void reset_source_profile() {
