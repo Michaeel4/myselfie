@@ -4088,28 +4088,21 @@ void get_symbol() {
           symbol = SYM_LEQ;
         }  
         
-        if(character == CHAR_LT){
+        else if(character == CHAR_LT){
+          get_character();
 
         // set the symbol to our left shift
         symbol = SYM_L_BIT_SHIFT;
 
           // fetch the next character
-          get_character();
-         }
+        }
 
         
         else
           symbol = SYM_LT;
 
-      }// else if (character == CHAR_GT) {
-      //   get_character();
-        
-        
-      //   }
-        
-        
-        else if (character == CHAR_GT) {
-        get_character();
+      }  else if (character == CHAR_GT) {
+          get_character();
 
 
 
@@ -4122,7 +4115,7 @@ void get_symbol() {
         // Assignment 2 =====
 
         // Same as described above at "char_lt"
-        if(character == CHAR_GT){
+        else if(character == CHAR_GT){
           get_character();
           symbol = SYM_R_BIT_SHIFT;
         }
@@ -9623,7 +9616,6 @@ void do_add() {
   read_register(rs2);
 
   if (rd != REG_ZR) {
-    // semantics of add
     next_rd_value = *(registers + rs1) << *(registers + rs2);
 
     if (*(registers + rd) != next_rd_value)
@@ -10665,7 +10657,15 @@ void execute_record() {
   } else if (is == ADD) {
     record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
     do_add();
-  } else if (is == SUB) {
+  } // Assignment 3
+  else if (is == SLL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_sll();
+  } else if (is == SRL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_srl();
+  } 
+  else if (is == SUB) {
     record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
     do_sub();
   } else if (is == MUL) {
@@ -10695,14 +10695,7 @@ void execute_record() {
   } else if (is == ECALL) {
     record_ecall();
     do_ecall();
-  } // Assignment 3
-  else if (is == SLL){
-    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
-    do_sll();
-  } else if (is == SRL){
-    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
-    do_srl();
-  }
+  } 
 }
 
 void execute_undo() {
@@ -10752,7 +10745,17 @@ void execute_debug() {
     print_add_sub_mul_divu_remu_sltu_before();
     do_remu();
     print_addi_add_sub_mul_divu_remu_sltu_after();
-  } else if (is == SLTU) {
+  } // Assignment 3
+  else if (is == SLL) {
+    print_add_sub_mul_divu_remu_sltu_before();
+    do_sll();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  }else if (is == SRL) {
+    print_add_sub_mul_divu_remu_sltu_before();
+    do_srl();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  }
+   else if (is == SLTU) {
     print_add_sub_mul_divu_remu_sltu_before();
     do_sltu();
     print_addi_add_sub_mul_divu_remu_sltu_after();
