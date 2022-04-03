@@ -10277,6 +10277,10 @@ uint64_t print_instruction() {
     return print_store();
   else if (is == ADD)
     return print_add_sub_mul_divu_remu_sltu();
+  else if (is == SLL)
+    return print_add_sub_mul_divu_remu_sltu(); // Assignment 3
+  else if (is == SRL)
+    return print_add_sub_mul_divu_remu_sltu();
   else if (is == SUB)
     return print_add_sub_mul_divu_remu_sltu();
   else if (is == MUL)
