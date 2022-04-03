@@ -998,8 +998,8 @@ uint64_t F3_ECALL = 0; // 000
 
 // === Assignment 3
 
-uint64_t F3_SLL = 1;
-uint64_t F3_SRL = 5;
+uint64_t F3_SLL = 3;
+uint64_t F3_SRL = 3;
 
 // f7-codes
 uint64_t F7_ADD  = 0;  // 0000000
@@ -1853,7 +1853,6 @@ void init_disassembler() {
   *(MNEMONICS + DIVU)  = (uint64_t) "divu";
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
-
   // Assignment 3
   *(MNEMONICS + SLL)  = (uint64_t) "sll";
   *(MNEMONICS + SRL)  = (uint64_t) "srl";
@@ -1866,6 +1865,7 @@ void init_disassembler() {
   *(MNEMONICS + JAL)   = (uint64_t) "jal";
   *(MNEMONICS + JALR)  = (uint64_t) "jalr";
   *(MNEMONICS + ECALL) = (uint64_t) "ecall";
+
 
   
 }
@@ -4395,10 +4395,10 @@ uint64_t is_comparison() {
     return 1;
   else if (symbol == SYM_GEQ)
     return 1;
-  else if (symbol == SYM_L_BIT_SHIFT)
-    return 1;
-  else if (symbol == SYM_R_BIT_SHIFT)
-    return 1;
+  // else if (symbol == SYM_L_BIT_SHIFT)
+  //   return 1;
+  // else if (symbol == SYM_R_BIT_SHIFT)
+  //   return 1;
   else
     return 0;
 }
@@ -5139,7 +5139,7 @@ uint64_t compile_term() {
 // == Assignment 3
 
 
-uint64_t is_bitshift(){
+uint64_t is_bit_shift(){
   if(symbol == SYM_L_BIT_SHIFT)
     return 1;
   else if(symbol == SYM_R_BIT_SHIFT)
@@ -5159,8 +5159,7 @@ uint64_t compile_shift_expression(){
 
   // assert: allocated_temporaries == n + 1
 
-  // * / or % ?
-  while (is_bitshift()) {
+  while (is_bit_shift()) {
     operator_symbol = symbol;
 
     get_symbol();
@@ -5174,7 +5173,6 @@ uint64_t compile_shift_expression(){
 
 
       if(operator_symbol == SYM_L_BIT_SHIFT){
-
         emit_sll(previous_temporary(), previous_temporary(), current_temporary());
       } else if(operator_symbol == SYM_R_BIT_SHIFT){
 
@@ -5273,7 +5271,6 @@ uint64_t compile_simple_expression() {
   return ltype;
 }
 
-// === Assignment 3 
 uint64_t compile_expression() {
   uint64_t ltype;
   uint64_t operator_symbol;
@@ -5282,7 +5279,8 @@ uint64_t compile_expression() {
   // assert: n = allocated_temporaries
 // === Assignment 3 
 
-  ltype = compile_shift_expression();
+  ltype = compile_shift_expression();  // === Assignment 3 
+
 
   // assert: allocated_temporaries == n + 1
 
@@ -5291,9 +5289,9 @@ uint64_t compile_expression() {
     operator_symbol = symbol;
 
     get_symbol();
-// === Assignment 3 
 
-    rtype = compile_shift_expression();
+    rtype = compile_shift_expression(); // === Assignment 3 
+
 
     // assert: allocated_temporaries == n + 2
 
@@ -9610,6 +9608,54 @@ void do_add() {
 // Assignment 3
 
 
+  void do_sll() {
+   uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
+  if (rd != REG_ZR) {
+    // semantics of add
+    next_rd_value = *(registers + rs1) << *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_sll = nopc_sll + 1;
+  } else
+    nopc_sll = nopc_sll + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_sll = ic_sll + 1;
+}
+
+void do_srl() {
+   uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
+  if (rd != REG_ZR) {
+    next_rd_value = *(registers + rs1) >> *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_srl = nopc_srl + 1;
+  } else
+    nopc_srl = nopc_srl + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_srl = ic_srl + 1;
+}
+
+
 
 
 
@@ -10498,6 +10544,12 @@ void decode() {
     } else if (funct3 == F3_SLTU) {
       if (funct7 == F7_SLTU)
         is = SLTU;
+    }else if(funct3 == F3_SLL){
+      if(funct7 == F7_SLL)
+        is = SLL;
+    } else if(funct3 == F3_SRL){
+      if(funct7 == F7_SRL)
+        is = SRL;
     }
   } else if (opcode == OP_BRANCH) {
     decode_b_format();
@@ -10580,6 +10632,11 @@ void execute() {
     do_lui();
   else if (is == ECALL)
     do_ecall();
+  else if (is == SLL)   //Assignment3
+    do_sll();
+  else if(is == SRL)   //Assignment3
+    do_srl();
+
 }
 
 void execute_record() {
@@ -10626,6 +10683,13 @@ void execute_record() {
   } else if (is == ECALL) {
     record_ecall();
     do_ecall();
+  } // Assignment 3
+  else if (is == SLL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_sll();
+  } else if (is == SRL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_srl();
   }
 }
 
