@@ -998,8 +998,8 @@ uint64_t F3_ECALL = 0; // 000
 
 // === Assignment 3
 
-uint64_t F3_SLL = 3;
-uint64_t F3_SRL = 3;
+uint64_t F3_SLL = 1;
+uint64_t F3_SRL = 5;
 
 // f7-codes
 uint64_t F7_ADD  = 0;  // 0000000
@@ -4081,6 +4081,13 @@ void get_symbol() {
         // we can check again if we got another char_lt
         // which indicates that we are dealing with a bitwise shift "<<"" operator.
         // the same approach is used for the right bitwise shift operator ">>" down below.
+       
+        if (character == CHAR_EQUAL) {
+          get_character();
+
+          symbol = SYM_LEQ;
+        }  
+        
         if(character == CHAR_LT){
 
         // set the symbol to our left shift
@@ -4090,11 +4097,8 @@ void get_symbol() {
           get_character();
          }
 
-        if (character == CHAR_EQUAL) {
-          get_character();
-
-          symbol = SYM_LEQ;
-        } else
+        
+        else
           symbol = SYM_LT;
 
       }// else if (character == CHAR_GT) {
@@ -4108,6 +4112,13 @@ void get_symbol() {
         get_character();
 
 
+
+        if (character == CHAR_EQUAL) {
+          get_character();
+
+          symbol = SYM_GEQ;
+        }
+
         // Assignment 2 =====
 
         // Same as described above at "char_lt"
@@ -4115,12 +4126,8 @@ void get_symbol() {
           get_character();
           symbol = SYM_R_BIT_SHIFT;
         }
-
-        if (character == CHAR_EQUAL) {
-          get_character();
-
-          symbol = SYM_GEQ;
-        } else
+        
+        else
           symbol = SYM_GT;
 
       } else if (character == CHAR_DOT) {
@@ -5147,6 +5154,7 @@ uint64_t is_bit_shift(){
   return 0;
 }
 
+// Assignment 3
 uint64_t compile_shift_expression(){
 
   uint64_t ltype;
@@ -5172,10 +5180,10 @@ uint64_t compile_shift_expression(){
       type_warning(ltype, rtype);
 
 
-      if(operator_symbol == SYM_L_BIT_SHIFT){
+    if(operator_symbol == SYM_L_BIT_SHIFT){
         emit_sll(previous_temporary(), previous_temporary(), current_temporary());
-      } else if(operator_symbol == SYM_R_BIT_SHIFT){
-
+      }   
+    else if(operator_symbol == SYM_R_BIT_SHIFT){
         emit_srl(previous_temporary(), previous_temporary(), current_temporary());
       }
 
@@ -5330,22 +5338,22 @@ uint64_t compile_expression() {
       tfree(1);
 
     }
-    // Assignent 3
+    // // Assignent 3
 
-      else if (operator_symbol == SYM_L_BIT_SHIFT) {
-      emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
+    //   else if (operator_symbol == SYM_L_BIT_SHIFT) {
+    //   emit_sltu(previous_temporary(), previous_temporary(), current_temporary());
 
-      tfree(1);
+    //   tfree(1);
 
-     }
+    //  }
 
-      else if (operator_symbol == SYM_R_BIT_SHIFT) {
-      // a > b iff b < a
-      emit_sltu(previous_temporary(), current_temporary(), previous_temporary());
+    //   else if (operator_symbol == SYM_R_BIT_SHIFT) {
+    //   // a > b iff b < a
+    //   emit_sltu(previous_temporary(), current_temporary(), previous_temporary());
 
-      tfree(1);
+    //   tfree(1);
 
-     }
+    //  }
     
      else if (operator_symbol == SYM_LEQ) {
       // a <= b iff 1 - (b < a)
