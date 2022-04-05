@@ -2033,7 +2033,6 @@ uint64_t nopc_jal   = 0;
 uint64_t nopc_jalr  = 0;
 
 // Assignment 3
-
 uint64_t nopc_sll  = 0;
 uint64_t nopc_srl  = 0;
 
