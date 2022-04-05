@@ -1858,13 +1858,13 @@ void init_disassembler() {
   *(MNEMONICS + SRL)  = (uint64_t) "srl";
 
 
-
   reset_disassembler();
 
   *(MNEMONICS + BEQ)   = (uint64_t) "beq";
   *(MNEMONICS + JAL)   = (uint64_t) "jal";
   *(MNEMONICS + JALR)  = (uint64_t) "jalr";
   *(MNEMONICS + ECALL) = (uint64_t) "ecall";
+
 
 
   
@@ -10532,6 +10532,15 @@ void decode() {
   } else if (opcode == OP_OP) { // could be ADD, SUB, MUL, DIVU, REMU, SLTU
     decode_r_format();
 
+     if(funct3 == F3_SLL){
+      if(funct7 == F7_SLL)
+        is = SLL;
+    } else if(funct3 == F3_SRL){
+      if(funct7 == F7_SRL)
+        is = SRL;
+    } 
+    
+
     if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
       if (funct7 == F7_ADD)
         is = ADD;
@@ -10548,12 +10557,6 @@ void decode() {
     } else if (funct3 == F3_SLTU) {
       if (funct7 == F7_SLTU)
         is = SLTU;
-    }else if(funct3 == F3_SLL){
-      if(funct7 == F7_SLL)
-        is = SLL;
-    } else if(funct3 == F3_SRL){
-      if(funct7 == F7_SRL)
-        is = SRL;
     }
   } else if (opcode == OP_BRANCH) {
     decode_b_format();
@@ -10657,13 +10660,6 @@ void execute_record() {
   } else if (is == ADD) {
     record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
     do_add();
-  } // Assignment 3
-  else if (is == SLL){
-    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
-    do_sll();
-  } else if (is == SRL){
-    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
-    do_srl();
   } 
   else if (is == SUB) {
     record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
@@ -10695,6 +10691,13 @@ void execute_record() {
   } else if (is == ECALL) {
     record_ecall();
     do_ecall();
+  } // Assignment 3
+  else if (is == SLL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_sll();
+  } else if (is == SRL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_srl();
   } 
 }
 
