@@ -536,15 +536,15 @@ void init_scanner () {
   *(SYMBOLS + SYM_GT)           = (uint64_t) ">";
   *(SYMBOLS + SYM_GEQ)          = (uint64_t) ">=";
   *(SYMBOLS + SYM_ELLIPSIS)     = (uint64_t) "...";
+  // ==== Assignment 2 ==== 
+  *(SYMBOLS + SYM_L_BIT_SHIFT) = (uint64_t) "<<";
+  *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
 
   *(SYMBOLS + SYM_INT)      = (uint64_t) "int";
   *(SYMBOLS + SYM_CHAR)     = (uint64_t) "char";
   *(SYMBOLS + SYM_UNSIGNED) = (uint64_t) "unsigned";
   *(SYMBOLS + SYM_CONST)    = (uint64_t) "const";
 
-  // ==== Assignment 2 ==== 
-  *(SYMBOLS + SYM_L_BIT_SHIFT) = (uint64_t) "<<";
-  *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
 
   // ==== Assignment 3 ====
 
@@ -7121,13 +7121,11 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
 // Assignment 3
 void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F3_SLL, rd, OP_OP));
-
   ic_sll = ic_sll + 1;
 }
 
 void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F3_SRL, rd, OP_OP));
-
   ic_srl = ic_srl + 1;
 }
 
@@ -10637,12 +10635,13 @@ void execute() {
     do_jalr();
   else if (is == LUI)
     do_lui();
-  else if (is == ECALL)
-    do_ecall();
   else if (is == SLL)   //Assignment3
     do_sll();
   else if(is == SRL)   //Assignment3
     do_srl();
+  else if (is == ECALL)
+    do_ecall();
+ 
 
 }
 
