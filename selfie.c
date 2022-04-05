@@ -457,14 +457,14 @@ uint64_t SYM_ELLIPSIS     = 28; // ...
 uint64_t SYM_INT      = 29; // int
 uint64_t SYM_CHAR     = 30; // char
 uint64_t SYM_UNSIGNED = 31; // unsigned
-uint64_t SYM_CONST    = 32; // const
 
 
 // === Assignments 2 ===
 // symbols for bit shifting << and >>
 
-uint64_t SYM_L_BIT_SHIFT = 33; // <<
-uint64_t SYM_R_BIT_SHIFT = 34; // >> 
+uint64_t SYM_L_BIT_SHIFT = 32; // <<
+uint64_t SYM_R_BIT_SHIFT = 33; // >> 
+uint64_t SYM_CONST    = 34; // const
 
 
 // =====================
@@ -724,6 +724,8 @@ uint64_t  compile_macro(uint64_t* entry);
 uint64_t  compile_call(char* procedure);
 uint64_t  compile_factor();
 uint64_t  compile_term();
+// Assignment 3
+uint64_t  compile_shift_expression();
 uint64_t  compile_simple_expression();
 uint64_t  compile_expression();
 void      compile_while();
@@ -736,7 +738,9 @@ uint64_t  compile_initialization(uint64_t type);
 void      compile_procedure(char* procedure, uint64_t type);
 void      compile_cstar();
 
- 
+// Assignment 3
+
+uint64_t is_bit_shift();
 
 
 // ------------------------ GLOBAL VARIABLES -----------------------
@@ -2033,6 +2037,7 @@ uint64_t nopc_jal   = 0;
 uint64_t nopc_jalr  = 0;
 
 // Assignment 3
+
 uint64_t nopc_sll  = 0;
 uint64_t nopc_srl  = 0;
 
@@ -5174,7 +5179,9 @@ uint64_t compile_shift_expression(){
 
     if(operator_symbol == SYM_L_BIT_SHIFT){
         emit_sll(previous_temporary(), previous_temporary(), current_temporary());
-      }   
+    }   
+
+     
     else if(operator_symbol == SYM_R_BIT_SHIFT){
         emit_srl(previous_temporary(), previous_temporary(), current_temporary());
       }
@@ -5585,11 +5592,11 @@ void compile_statement() {
   }
 
 
-  if(symbol == SYM_L_BIT_SHIFT){
-    get_symbol();
-  }
+  // if(symbol == SYM_L_BIT_SHIFT){
+  //   get_symbol();
+  // }
 
-  // 
+  // // 
 
 
   // ["*"]
@@ -9620,7 +9627,7 @@ void do_add() {
     else
       nopc_sll = nopc_sll + 1;
   } else
-    nopc_sll = nopc_sll + 1;
+      nopc_sll = nopc_sll + 1;
 
   write_register(rd);
 
@@ -9643,7 +9650,7 @@ void do_srl() {
     else
       nopc_srl = nopc_srl + 1;
   } else
-    nopc_srl = nopc_srl + 1;
+      nopc_srl = nopc_srl + 1;
 
   write_register(rd);
 
@@ -10505,6 +10512,8 @@ void decode() {
 
   is = 0;
 
+  
+
   if (opcode == OP_IMM) {
     decode_i_format();
 
@@ -10674,7 +10683,15 @@ void execute_record() {
   } else if (is == SLTU) {
     record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
     do_sltu();
-  } else if (is == BEQ) {
+  }// Assignment 3
+    else if (is == SLL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_sll();
+  } else if (is == SRL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_srl();
+  } 
+   else if (is == BEQ) {
     record_beq();
     do_beq();
   } else if (is == JAL) {
@@ -10689,13 +10706,6 @@ void execute_record() {
   } else if (is == ECALL) {
     record_ecall();
     do_ecall();
-  } // Assignment 3
-  else if (is == SLL){
-    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
-    do_sll();
-  } else if (is == SRL){
-    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
-    do_srl();
   } 
 }
 
