@@ -1243,6 +1243,10 @@ void reset_instruction_counters() {
   ic_divu  = 0;
   ic_remu  = 0;
   ic_sltu  = 0;
+
+  // Assignment 3
+  ic_sll = 0;
+  ic_srl = 0;
   ic_load  = 0;
   ic_store = 0;
   ic_beq   = 0;
@@ -1250,9 +1254,6 @@ void reset_instruction_counters() {
   ic_jalr  = 0;
   ic_ecall = 0;
 
-  // Assignment 3
-  ic_sll = 0;
-  ic_srl = 0;
 }
 
 // -----------------------------------------------------------------
@@ -1847,15 +1848,16 @@ void init_disassembler() {
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
 
-  // Assignment 3
-  *(MNEMONICS + SLL)  = (uint64_t) "sll";
-  *(MNEMONICS + SRL)  = (uint64_t) "srl";
+ 
   reset_disassembler();
 
   *(MNEMONICS + BEQ)   = (uint64_t) "beq";
   *(MNEMONICS + JAL)   = (uint64_t) "jal";
   *(MNEMONICS + JALR)  = (uint64_t) "jalr";
   *(MNEMONICS + ECALL) = (uint64_t) "ecall";
+   // Assignment 3
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
 }
 
 void reset_disassembler() {
@@ -10495,13 +10497,7 @@ void decode() {
     decode_r_format();
 
     // Assignment 3
-    if(funct3 == F3_SLL){
-      if(funct7 == F7_SLL)
-        is = SLL;
-    } else if(funct3 == F3_SRL){
-      if(funct7 == F7_SRL)
-        is = SRL;
-    }
+    
 
     if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
       if (funct7 == F7_ADD)
@@ -10513,13 +10509,18 @@ void decode() {
     } else if (funct3 == F3_DIVU) {
       if (funct7 == F7_DIVU)
         is = DIVU;
+      if (funct7 == F7_SRL)
+        is = SRL;
     } else if (funct3 == F3_REMU) {
       if (funct7 == F7_REMU)
         is = REMU;
     } else if (funct3 == F3_SLTU) {
       if (funct7 == F7_SLTU)
         is = SLTU;
-    }
+    } else if(funct3 == F3_SLL){
+      if(funct7 == F7_SLL)
+        is = SLL;
+    } 
   } else if (opcode == OP_BRANCH) {
     decode_b_format();
 
