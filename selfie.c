@@ -9594,7 +9594,7 @@ void do_sll() {
     else
       nopc_sll = nopc_sll + 1;
   } else
-    nopc_sll = nopc_sll + 1;
+      nopc_sll = nopc_sll + 1;
 
   write_register(rd);
 
@@ -9618,7 +9618,7 @@ void do_srl() {
     else
       nopc_srl = nopc_srl + 1;
   } else
-    nopc_srl = nopc_srl + 1;
+      nopc_srl = nopc_srl + 1;
 
   write_register(rd);
 
@@ -10702,9 +10702,7 @@ void execute_debug() {
     print_add_sub_mul_divu_remu_sltu_before();
     do_srl();
     print_addi_add_sub_mul_divu_remu_sltu_after();
-  }
-  
-   else if (is == SUB) {
+  } else if (is == SUB) {
     print_add_sub_mul_divu_remu_sltu_before();
     do_sub();
     print_addi_add_sub_mul_divu_remu_sltu_after();
