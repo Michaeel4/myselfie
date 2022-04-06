@@ -1244,16 +1244,15 @@ void reset_instruction_counters() {
   ic_remu  = 0;
   ic_sltu  = 0;
 
- 
+  // Assignment 3
+  ic_sll = 0;
+  ic_srl = 0;
   ic_load  = 0;
   ic_store = 0;
   ic_beq   = 0;
   ic_jal   = 0;
   ic_jalr  = 0;
   ic_ecall = 0;
-   // Assignment 3
-  ic_sll = 0;
-  ic_srl = 0;
 
 }
 
@@ -1848,9 +1847,7 @@ void init_disassembler() {
   *(MNEMONICS + DIVU)  = (uint64_t) "divu";
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
-   // Assignment 3
-  *(MNEMONICS + SLL)  = (uint64_t) "sll";
-  *(MNEMONICS + SRL)  = (uint64_t) "srl";
+
  
   reset_disassembler();
 
@@ -1858,7 +1855,9 @@ void init_disassembler() {
   *(MNEMONICS + JAL)   = (uint64_t) "jal";
   *(MNEMONICS + JALR)  = (uint64_t) "jalr";
   *(MNEMONICS + ECALL) = (uint64_t) "ecall";
-
+   // Assignment 3
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
 }
 
 void reset_disassembler() {
@@ -5124,16 +5123,17 @@ uint64_t compile_term() {
 // Assignment 03
 
 uint64_t is_bit_shift(){
+
   if(symbol == SYM_L_BIT_SHIFT)
     return 1;
-  else if(symbol == SYM_R_BIT_SHIFT)
+  else if (symbol == SYM_R_BIT_SHIFT)
     return 1;
+
   return 0;
 }
 
-// Assignment 3
-uint64_t compile_shift_expression(){
 
+uint64_t compile_shift_expression() {
   uint64_t ltype;
   uint64_t operator_symbol;
   uint64_t rtype;
@@ -5144,6 +5144,7 @@ uint64_t compile_shift_expression(){
 
   // assert: allocated_temporaries == n + 1
 
+  // * / or % ?
   while (is_bit_shift()) {
     operator_symbol = symbol;
 
@@ -5156,15 +5157,11 @@ uint64_t compile_shift_expression(){
     if (ltype != rtype)
       type_warning(ltype, rtype);
 
-
-    if(operator_symbol == SYM_L_BIT_SHIFT){
-        emit_sll(previous_temporary(), previous_temporary(), current_temporary());
-    }   
-
-     
-    else if(operator_symbol == SYM_R_BIT_SHIFT){
-        emit_srl(previous_temporary(), previous_temporary(), current_temporary());
-      }
+    if (operator_symbol == SYM_L_BIT_SHIFT)
+      emit_sll(previous_temporary(), previous_temporary(), current_temporary());
+    else if (operator_symbol == SYM_R_BIT_SHIFT)
+      emit_srl(previous_temporary(), previous_temporary(), current_temporary());
+   
 
     tfree(1);
   }
@@ -5174,6 +5171,8 @@ uint64_t compile_shift_expression(){
   // type of term is grammar attribute
   return ltype;
 }
+
+
 
 uint64_t compile_simple_expression() {
   uint64_t ltype;
@@ -7096,6 +7095,7 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
 
 void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F3_SLL, rd, OP_OP));
+
   ic_sll = ic_sll + 1;
 }
 void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
@@ -9593,9 +9593,9 @@ void do_sll() {
       *(registers + rd) = next_rd_value;
     else
       nopc_sll = nopc_sll + 1;
-  } else{
+  } else
       nopc_sll = nopc_sll + 1;
-  }
+
   write_register(rd);
 
   pc = pc + INSTRUCTIONSIZE;
@@ -9617,9 +9617,9 @@ void do_srl() {
       *(registers + rd) = next_rd_value;
     else
       nopc_srl = nopc_srl + 1;
-  } else{
+  } else
       nopc_srl = nopc_srl + 1;
-  }
+
   write_register(rd);
 
   pc = pc + INSTRUCTIONSIZE;
