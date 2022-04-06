@@ -1847,7 +1847,9 @@ void init_disassembler() {
   *(MNEMONICS + DIVU)  = (uint64_t) "divu";
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
-
+   // Assignment 3
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
  
   reset_disassembler();
 
@@ -1855,9 +1857,7 @@ void init_disassembler() {
   *(MNEMONICS + JAL)   = (uint64_t) "jal";
   *(MNEMONICS + JALR)  = (uint64_t) "jalr";
   *(MNEMONICS + ECALL) = (uint64_t) "ecall";
-   // Assignment 3
-  *(MNEMONICS + SLL)  = (uint64_t) "sll";
-  *(MNEMONICS + SRL)  = (uint64_t) "srl";
+
 }
 
 void reset_disassembler() {
@@ -5123,12 +5123,10 @@ uint64_t compile_term() {
 // Assignment 03
 
 uint64_t is_bit_shift(){
-
   if(symbol == SYM_L_BIT_SHIFT)
     return 1;
   else if (symbol == SYM_R_BIT_SHIFT)
     return 1;
-
   return 0;
 }
 
@@ -9617,9 +9615,9 @@ void do_srl() {
       *(registers + rd) = next_rd_value;
     else
       nopc_srl = nopc_srl + 1;
-  } else
+  } else{
       nopc_srl = nopc_srl + 1;
-
+  }
   write_register(rd);
 
   pc = pc + INSTRUCTIONSIZE;
