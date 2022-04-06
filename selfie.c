@@ -457,14 +457,14 @@ uint64_t SYM_ELLIPSIS     = 28; // ...
 uint64_t SYM_INT      = 29; // int
 uint64_t SYM_CHAR     = 30; // char
 uint64_t SYM_UNSIGNED = 31; // unsigned
-uint64_t SYM_CONST    = 32; // const
+uint64_t SYM_CONST    = 34; // const
 
 
 // === Assignments 2 ===
 // symbols for bit shifting << and >>
 
-uint64_t SYM_L_BIT_SHIFT = 33; // <<
-uint64_t SYM_R_BIT_SHIFT = 34; // >> 
+uint64_t SYM_L_BIT_SHIFT = 32; // <<
+uint64_t SYM_R_BIT_SHIFT = 33; // >> 
 
 
 // =====================
@@ -724,6 +724,7 @@ uint64_t  compile_macro(uint64_t* entry);
 uint64_t  compile_call(char* procedure);
 uint64_t  compile_factor();
 uint64_t  compile_term();
+uint64_t  compile_shift_expression();
 uint64_t  compile_simple_expression();
 uint64_t  compile_expression();
 void      compile_while();
@@ -996,6 +997,11 @@ uint64_t F3_BEQ   = 0; // 000
 uint64_t F3_JALR  = 0; // 000
 uint64_t F3_ECALL = 0; // 000
 
+// Assignment 3
+
+uint64_t F3_SLL = 1;
+uint64_t F3_SRL = 5;
+
 // f7-codes
 uint64_t F7_ADD  = 0;  // 0000000
 uint64_t F7_MUL  = 1;  // 0000001
@@ -1003,6 +1009,10 @@ uint64_t F7_SUB  = 32; // 0100000
 uint64_t F7_DIVU = 1;  // 0000001
 uint64_t F7_REMU = 1;  // 0000001
 uint64_t F7_SLTU = 0;  // 0000000
+
+uint64_t F7_SLL  = 0;  // 0000000
+uint64_t F7_SRL  = 0;  // 0000000
+
 
 // f12-codes (immediates)
 uint64_t F12_ECALL = 0; // 000000000000
@@ -1060,6 +1070,11 @@ void emit_mul(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_divu(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_remu(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_sltu(uint64_t rd, uint64_t rs1, uint64_t rs2);
+
+// Assignment 3
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2);
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2);
+
 
 void emit_load(uint64_t rd, uint64_t rs1, uint64_t immediate);
 void emit_store(uint64_t rs1, uint64_t immediate, uint64_t rs2);
@@ -1182,6 +1197,11 @@ uint64_t ic_jal   = 0;
 uint64_t ic_jalr  = 0;
 uint64_t ic_ecall = 0;
 
+// Assignment 3
+
+uint64_t ic_sll = 0;
+uint64_t ic_srl = 0;
+
 char* binary_name = (char*) 0; // file name of binary
 
 uint64_t* ELF_header = (uint64_t*) 0;
@@ -1229,6 +1249,10 @@ void reset_instruction_counters() {
   ic_jal   = 0;
   ic_jalr  = 0;
   ic_ecall = 0;
+
+  // Assignment 3
+  ic_sll = 0;
+  ic_srl = 0;
 }
 
 // -----------------------------------------------------------------
@@ -1724,6 +1748,10 @@ void do_mul();
 void do_divu();
 void do_remu();
 
+// Assignment 3
+void do_sll();
+void do_srl();
+
 void do_sltu();
 
 uint64_t print_load();
@@ -1782,6 +1810,9 @@ uint64_t JAL   = 12;
 uint64_t JALR  = 13;
 uint64_t ECALL = 14;
 
+uint64_t SLL = 15;
+uint64_t SRL = 16;
+
 uint64_t* MNEMONICS; // assembly mnemonics of instructions
 
 // -----------------------------------------------------------------
@@ -1816,6 +1847,9 @@ void init_disassembler() {
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
 
+  // Assignment 3
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
   reset_disassembler();
 
   *(MNEMONICS + BEQ)   = (uint64_t) "beq";
@@ -1985,6 +2019,11 @@ uint64_t nopc_store = 0;
 uint64_t nopc_beq   = 0;
 uint64_t nopc_jal   = 0;
 uint64_t nopc_jalr  = 0;
+
+
+// Assignment 3
+uint64_t nopc_sll = 0;
+uint64_t nopc_srl = 0;
 
 // source profile
 
@@ -5079,7 +5118,57 @@ uint64_t compile_term() {
   return ltype;
 }
 
+// Assignment 03
 
+uint64_t is_bit_shift(){
+
+  if(symbol == SYM_L_BIT_SHIFT)
+    return 1;
+  else if (symbol == SYM_R_BIT_SHIFT)
+    return 1;
+
+  return 0;
+}
+
+
+uint64_t compile_shift_expression() {
+  uint64_t ltype;
+  uint64_t operator_symbol;
+  uint64_t rtype;
+
+  // assert: n = allocated_temporaries
+
+  ltype = compile_simple_expression();
+
+  // assert: allocated_temporaries == n + 1
+
+  // * / or % ?
+  while (is_bit_shift()) {
+    operator_symbol = symbol;
+
+    get_symbol();
+
+    rtype = compile_simple_expression();
+
+    // assert: allocated_temporaries == n + 2
+
+    if (ltype != rtype)
+      type_warning(ltype, rtype);
+
+    if (operator_symbol == SYM_L_BIT_SHIFT)
+      emit_sll(previous_temporary(), previous_temporary(), current_temporary());
+    else if (operator_symbol == SYM_R_BIT_SHIFT)
+      emit_srl(previous_temporary(), previous_temporary(), current_temporary());
+   
+
+    tfree(1);
+  }
+
+  // assert: allocated_temporaries == n + 1
+
+  // type of term is grammar attribute
+  return ltype;
+}
 
 
 
@@ -5166,7 +5255,7 @@ uint64_t compile_expression() {
 
   // assert: n = allocated_temporaries
 
-  ltype = compile_simple_expression();
+  ltype = compile_shift_expression(); // Assignment 3
 
   // assert: allocated_temporaries == n + 1
 
@@ -5176,7 +5265,7 @@ uint64_t compile_expression() {
 
     get_symbol();
 
-    rtype = compile_simple_expression();
+    rtype = compile_shift_expression();
 
     // assert: allocated_temporaries == n + 2
 
@@ -6817,12 +6906,13 @@ void decode_u_format() {
 // ---------------------------- BINARY -----------------------------
 // -----------------------------------------------------------------
 
+// Assignment 3
 uint64_t get_total_number_of_instructions() {
-  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
+  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_sll + ic_srl + ic_divu + ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
 }
 
 uint64_t get_total_number_of_nops() {
-  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_divu + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
+  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_sll + nopc_srl + nopc_divu + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
 }
 
 void print_instruction_counter(uint64_t counter, uint64_t ins) {
@@ -6997,6 +7087,18 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_ADD, rs2, rs1, F3_ADD, rd, OP_OP));
 
   ic_add = ic_add + 1;
+}
+
+// Assignment 3
+
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F3_SLL, rd, OP_OP));
+
+  ic_sll = ic_sll + 1;
+}
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F3_SRL, rd, OP_OP));
+  ic_srl = ic_srl + 1;
 }
 
 void emit_sub(uint64_t rd, uint64_t rs1, uint64_t rs2) {
@@ -9473,6 +9575,56 @@ void do_add() {
   ic_add = ic_add + 1;
 }
 
+// Assignment 3
+
+void do_sll() {
+  uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
+  if (rd != REG_ZR) {
+    // semantics of add
+    next_rd_value = *(registers + rs1) << *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_sll = nopc_sll + 1;
+  } else
+    nopc_sll = nopc_sll + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_sll = ic_sll + 1;
+}
+
+void do_srl() {
+  uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
+  if (rd != REG_ZR) {
+    // semantics of add
+    next_rd_value = *(registers + rs1) >> *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_srl = nopc_srl + 1;
+  } else
+    nopc_srl = nopc_srl + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_srl = ic_srl + 1;
+}
+
 void do_sub() {
   uint64_t next_rd_value;
 
@@ -10342,6 +10494,15 @@ void decode() {
   } else if (opcode == OP_OP) { // could be ADD, SUB, MUL, DIVU, REMU, SLTU
     decode_r_format();
 
+    // Assignment 3
+    if(funct3 == F3_SLL){
+      if(funct7 == F7_SLL)
+        is = SLL;
+    } else if(funct3 == F3_SRL){
+      if(funct7 == F7_SRL)
+        is = SRL;
+    }
+
     if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
       if (funct7 == F7_ADD)
         is = ADD;
@@ -10420,6 +10581,10 @@ void execute() {
     do_store();
   else if (is == ADD)
     do_add();
+  else if (is == SLL) // Assignment 3
+    do_sll();
+  else if (is == SRL)
+    do_srl();
   else if (is == SUB)
     do_sub();
   else if (is == MUL)
@@ -10456,7 +10621,15 @@ void execute_record() {
   } else if (is == ADD) {
     record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
     do_add();
-  } else if (is == SUB) {
+  }else if (is == SLL) { // Assignment 3
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_sll();
+  }else if (is == SRL) {
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_srl();
+  }
+  
+   else if (is == SUB) {
     record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
     do_sub();
   } else if (is == MUL) {
@@ -10520,7 +10693,17 @@ void execute_debug() {
     print_add_sub_mul_divu_remu_sltu_before();
     do_add();
     print_addi_add_sub_mul_divu_remu_sltu_after();
-  } else if (is == SUB) {
+  }else if (is == SLL) {
+    print_add_sub_mul_divu_remu_sltu_before(); // Assignment 3
+    do_sll();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  }else if (is == SRL) {
+    print_add_sub_mul_divu_remu_sltu_before();
+    do_srl();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  }
+  
+   else if (is == SUB) {
     print_add_sub_mul_divu_remu_sltu_before();
     do_sub();
     print_addi_add_sub_mul_divu_remu_sltu_after();
