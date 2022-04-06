@@ -1847,7 +1847,7 @@ uint64_t assembly_fd   = 0;         // file descriptor of open assembly file
 // ------------------------- INITIALIZATION ------------------------
 
 void init_disassembler() {
-  MNEMONICS = smalloc((ECALL + 1) * SIZEOFUINT64STAR);
+  MNEMONICS = smalloc((SRL + 1) * SIZEOFUINT64STAR);
 
   *(MNEMONICS + LUI)   = (uint64_t) "lui";
   *(MNEMONICS + ADDI)  = (uint64_t) "addi";
@@ -5160,7 +5160,7 @@ uint64_t compile_shift_expression(){
 
   // assert: n = allocated_temporaries
 
-  ltype = compile_simple_expression();
+  ltype = compile_term();
 
   // assert: allocated_temporaries == n + 1
 
@@ -5169,7 +5169,7 @@ uint64_t compile_shift_expression(){
 
     get_symbol();
 
-    rtype = compile_simple_expression();
+    rtype = compile_term();
 
     // assert: allocated_temporaries == n + 2
 
@@ -5212,9 +5212,9 @@ uint64_t compile_simple_expression() {
 
   // assert: n = allocated_temporaries
 
-  ltype = compile_term();
+  ltype = compile_shift_expression();
 
-  // assert: allocated_temporaries == n + 1
+  // assert: allocated_tempor aries == n + 1
 
   // + or - ?
   while (is_plus_or_minus()) {
@@ -5222,7 +5222,7 @@ uint64_t compile_simple_expression() {
 
     get_symbol();
 
-    rtype = compile_term();
+    rtype = compile_shift_expression();
 
     // assert: allocated_temporaries == n + 2
 
@@ -5286,7 +5286,7 @@ uint64_t compile_expression() {
   // assert: n = allocated_temporaries
 // === Assignment 3 
 
-  ltype = compile_shift_expression();  // === Assignment 3 
+  ltype = compile_simple_expression();  // === Assignment 3 
 
 
   // assert: allocated_temporaries == n + 1
@@ -5297,7 +5297,7 @@ uint64_t compile_expression() {
 
     get_symbol();
 
-    rtype = compile_shift_expression(); // === Assignment 3 
+    rtype = compile_simple_expression(); // === Assignment 3 
 
 
     // assert: allocated_temporaries == n + 2
@@ -6980,13 +6980,13 @@ void print_instruction_counters() {
   print_instruction_counter_with_nops(ic_store, nopc_store, STORE);
   println();
 
-  printf("%s: compute: ", selfie_name);
-  print_instruction_counter_with_nops(ic_add, nopc_add, ADD);
-  print(", ");
-  print_instruction_counter_with_nops(ic_sub, nopc_sub, SUB);
-  print(", ");
-  print_instruction_counter_with_nops(ic_mul, nopc_mul, MUL);
-  println();
+    printf("%s: compute: ", selfie_name);
+    print_instruction_counter_with_nops(ic_add, nopc_add, ADD);
+    print(", ");
+    print_instruction_counter_with_nops(ic_sub, nopc_sub, SUB);
+    print(", ");
+    print_instruction_counter_with_nops(ic_mul, nopc_mul, MUL);
+    println();
 
   printf("%s: compute: ", selfie_name);
   print_instruction_counter_with_nops(ic_divu, nopc_divu, DIVU);
@@ -10538,14 +10538,15 @@ void decode() {
   } else if (opcode == OP_OP) { // could be ADD, SUB, MUL, DIVU, REMU, SLTU
     decode_r_format();
 
+    // Assignment 3
      if(funct3 == F3_SLL){
       if(funct7 == F7_SLL)
         is = SLL;
      }
-    // } else if(funct3 == F3_SRL){
-    //   if(funct7 == F7_SRL)
-    //     is = SRL;
-    // } 
+    else if(funct3 == F3_SRL){
+      if(funct7 == F7_SRL)
+        is = SRL;
+    } 
     
 
     if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
@@ -10558,7 +10559,7 @@ void decode() {
     } else if (funct3 == F3_DIVU) {
       if (funct7 == F7_DIVU)
         is = DIVU;
-      if(funct7 == F7_SRL)
+      if(funct7 == F7_SRL) // Assignment 3
         is = SRL;
     } else if (funct3 == F3_REMU) {
       if (funct7 == F7_REMU)
