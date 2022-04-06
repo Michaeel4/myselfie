@@ -998,8 +998,8 @@ uint64_t F3_ECALL = 0; // 000
 
 // Ass 3
 
-uint64_t F3_SLL = 5;
-uint64_t F3_SRL = 1;
+uint64_t F3_SLL = 1;
+uint64_t F3_SRL = 5;
 
 // f7-codes
 uint64_t F7_ADD  = 0;  // 0000000
@@ -1797,9 +1797,10 @@ uint64_t STORE = 10;
 uint64_t BEQ   = 11;
 uint64_t JAL   = 12;
 uint64_t JALR  = 13;
-uint64_t SLL = 14;
-uint64_t SRL = 15;
-uint64_t ECALL = 16;
+
+uint64_t ECALL = 14;
+uint64_t SLL = 15;
+uint64_t SRL = 16;
 
 uint64_t* MNEMONICS; // assembly mnemonics of instructions
 
@@ -1835,6 +1836,8 @@ void init_disassembler() {
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
 
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
 
 
 
@@ -1843,8 +1846,6 @@ void init_disassembler() {
   *(MNEMONICS + BEQ)   = (uint64_t) "beq";
   *(MNEMONICS + JAL)   = (uint64_t) "jal";
   *(MNEMONICS + JALR)  = (uint64_t) "jalr";
-  *(MNEMONICS + SLL)  = (uint64_t) "sll";
-  *(MNEMONICS + SRL)  = (uint64_t) "srl";
   *(MNEMONICS + ECALL) = (uint64_t) "ecall";
 }
 
@@ -5144,6 +5145,9 @@ uint64_t compile_shift_expression() {
 
     rtype = compile_simple_expression();
 
+    if (ltype != rtype)
+      type_warning(ltype, rtype);
+
     // assert: allocated_temporaries == n + 2
 
 
@@ -7087,12 +7091,10 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
 
 void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F3_SLL, rd, OP_OP));
-
   ic_sll = ic_sll + 1;
 }
 void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F3_SRL, rd, OP_OP));
-
   ic_srl = ic_srl + 1;
 }
 
