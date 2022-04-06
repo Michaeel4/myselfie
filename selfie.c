@@ -10582,10 +10582,6 @@ void execute() {
     do_store();
   else if (is == ADD)
     do_add();
-  else if (is == SLL) // Assignment 3
-    do_sll();
-  else if (is == SRL)
-    do_srl();
   else if (is == SUB)
     do_sub();
   else if (is == MUL)
@@ -10604,6 +10600,10 @@ void execute() {
     do_jalr();
   else if (is == LUI)
     do_lui();
+  else if (is == SLL) // Assignment 3
+    do_sll();
+  else if (is == SRL)
+    do_srl();
   else if (is == ECALL)
     do_ecall();
 }
