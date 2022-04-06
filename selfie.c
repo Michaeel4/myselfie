@@ -10541,10 +10541,11 @@ void decode() {
      if(funct3 == F3_SLL){
       if(funct7 == F7_SLL)
         is = SLL;
-    } else if(funct3 == F3_SRL){
-      if(funct7 == F7_SRL)
-        is = SRL;
-    } 
+     }
+    // } else if(funct3 == F3_SRL){
+    //   if(funct7 == F7_SRL)
+    //     is = SRL;
+    // } 
     
 
     if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
@@ -10557,6 +10558,8 @@ void decode() {
     } else if (funct3 == F3_DIVU) {
       if (funct7 == F7_DIVU)
         is = DIVU;
+      if(funct7 == F7_SRL)
+        is = SRL;
     } else if (funct3 == F3_REMU) {
       if (funct7 == F7_REMU)
         is = REMU;
