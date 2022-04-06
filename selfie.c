@@ -1836,14 +1836,15 @@ void init_disassembler() {
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
 
 
-  *(MNEMONICS + SLL)  = (uint64_t) "sll";
-  *(MNEMONICS + SRL)  = (uint64_t) "srl";
+
 
   reset_disassembler();
 
   *(MNEMONICS + BEQ)   = (uint64_t) "beq";
   *(MNEMONICS + JAL)   = (uint64_t) "jal";
   *(MNEMONICS + JALR)  = (uint64_t) "jalr";
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
   *(MNEMONICS + ECALL) = (uint64_t) "ecall";
 }
 
@@ -4069,8 +4070,9 @@ void get_symbol() {
           get_character();
 
           symbol = SYM_LEQ;
-        } else
+        } else{
           symbol = SYM_LT;
+        }
 
       }// else if (character == CHAR_GT) {
       //   get_character();
@@ -4370,10 +4372,10 @@ uint64_t is_comparison() {
     return 1;
   else if (symbol == SYM_GEQ)
     return 1;
-  else if (symbol == SYM_L_BIT_SHIFT)
-    return 1;
-  else if (symbol == SYM_R_BIT_SHIFT)
-    return 1;
+  // else if (symbol == SYM_L_BIT_SHIFT)
+  //   return 1;
+  // else if (symbol == SYM_R_BIT_SHIFT)
+  //   return 1;
   else
     return 0;
 }
@@ -5116,8 +5118,8 @@ uint64_t is_bit_shift() {
     return 1;
   else if(symbol == SYM_R_BIT_SHIFT)
     return 1;
-  else
-    return 0;
+  
+  return 0;
 }
 
 uint64_t compile_shift_expression() {
@@ -10491,15 +10493,14 @@ void decode() {
     decode_r_format();
 
 
-    if(funct3 == F3_SLL){
+   
+     if(funct3 == F3_SLL){
       if(funct7 == F7_SLL)
         is = SLL;
-    }
-    if(funct3 == F3_SRL){
+    } else if(funct3 == F3_SRL){
       if(funct7 == F7_SRL)
         is = SRL;
-    }
-
+    } 
     
 
     if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
