@@ -10591,7 +10591,7 @@ uint64_t print_instruction() {
     return print_add_sub_mul_divu_remu_sltu();
   else if (is == OR)
     return print_add_sub_mul_divu_remu_sltu();
-  else if (is == XORI)
+  else if (is == XORI) // must be changed to addi since XORI is type I Format and not R type.
     return print_addi();
   else if (is == SUB)
     return print_add_sub_mul_divu_remu_sltu();
