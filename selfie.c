@@ -255,14 +255,15 @@ uint64_t CHAR_EQUAL        = '=';
 uint64_t CHAR_EXCLAMATION  = '!';
 uint64_t CHAR_LT           = '<';
 uint64_t CHAR_GT           = '>';
+uint64_t CHAR_AND          = '&';
+uint64_t CHAR_OR           = '|';
+uint64_t CHAR_XORI         = '~';
 uint64_t CHAR_BACKSLASH    =  92; // ASCII code 92 = backslash
 uint64_t CHAR_DOT          = '.';
 
 // Assignment 4
 
-uint64_t CHAR_AND = '&';
-uint64_t CHAR_OR = '|';
-uint64_t CHAR_XORI = '~';
+
 
 
 
@@ -457,25 +458,25 @@ uint64_t SYM_GT           = 26; // >
 uint64_t SYM_GEQ          = 27; // >=
 uint64_t SYM_ELLIPSIS     = 28; // ...
 
-
-// symbols for bootstrapping
-
-uint64_t SYM_INT      = 29; // int
-uint64_t SYM_CHAR     = 30; // char
-uint64_t SYM_UNSIGNED = 31; // unsigned
-
-
 // === Assignments 2 ===
 // symbols for bit shifting << and >>
 
-uint64_t SYM_L_BIT_SHIFT = 32; // <<
-uint64_t SYM_R_BIT_SHIFT = 33; // >> 
+uint64_t SYM_L_BIT_SHIFT = 29; // <<
+uint64_t SYM_R_BIT_SHIFT = 30; // >> 
 
 
 // Assignment 4
-uint64_t SYM_AND = 34; // &
-uint64_t SYM_OR = 35; // |
-uint64_t SYM_XORI = 36; // <<
+uint64_t SYM_AND = 31; // &
+uint64_t SYM_OR = 32; // |
+uint64_t SYM_XORI = 33; // tidal
+// symbols for bootstrapping
+
+uint64_t SYM_INT      = 34; // int
+uint64_t SYM_CHAR     = 35; // char
+uint64_t SYM_UNSIGNED = 36; // unsigned
+
+
+
 
 uint64_t SYM_CONST    = 37; // const
 
@@ -549,14 +550,15 @@ void init_scanner () {
   *(SYMBOLS + SYM_GT)           = (uint64_t) ">";
   *(SYMBOLS + SYM_GEQ)          = (uint64_t) ">=";
   *(SYMBOLS + SYM_ELLIPSIS)     = (uint64_t) "...";
+   // ==== Assignment 4 ====
+  *(SYMBOLS + SYM_AND) = (uint64_t) "&";
+  *(SYMBOLS + SYM_OR) = (uint64_t) "|";
+  *(SYMBOLS + SYM_XORI) = (uint64_t) "~";
   // ==== Assignment 2 ==== 
   *(SYMBOLS + SYM_L_BIT_SHIFT) = (uint64_t) "<<";
   *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
 
-  // ==== Assignment 4 ====
-  *(SYMBOLS + SYM_AND) = (uint64_t) "&";
-  *(SYMBOLS + SYM_OR) = (uint64_t) "|";
-  *(SYMBOLS + SYM_XORI) = (uint64_t) "~";
+ 
 
 
   *(SYMBOLS + SYM_INT)      = (uint64_t) "int";
@@ -745,6 +747,8 @@ uint64_t  compile_factor();
 uint64_t  compile_term();
 // Assignment 3
 uint64_t  compile_shift_expression();
+
+
 uint64_t  compile_simple_expression();
 uint64_t  compile_expression();
 void      compile_while();
@@ -760,6 +764,12 @@ void      compile_cstar();
 // Assignment 3
 
 uint64_t is_bit_shift();
+
+// Assignment 4
+
+uint64_t bit_not_shift();
+
+
 
 
 // ------------------------ GLOBAL VARIABLES -----------------------
@@ -1925,9 +1935,7 @@ void init_disassembler() {
   // Assignment 3
   *(MNEMONICS + SLL)  = (uint64_t) "sll";
   *(MNEMONICS + SRL)  = (uint64_t) "srl";
-
   // Assignment 4
-
   *(MNEMONICS + AND)  = (uint64_t) "and";
   *(MNEMONICS + OR)  = (uint64_t) "or";
   *(MNEMONICS + XORI)  = (uint64_t) "xori";
@@ -4160,25 +4168,7 @@ void get_symbol() {
 
         symbol = SYM_NOTEQ;
 
-      } // Assignment 4
-
-
-      else if(character == CHAR_AND){
-
-        get_character();
-        symbol = SYM_AND;
-      }
-
-      else if(character == CHAR_OR){
-
-        get_character();
-        symbol = SYM_OR;
-      }
-      else if(character == CHAR_XORI){
-
-        get_character();
-        symbol = SYM_XORI;
-      }
+      } 
       
        else if (character == CHAR_LT) {
         get_character();
@@ -4231,7 +4221,25 @@ void get_symbol() {
         else
           symbol = SYM_GT;
 
-      } else if (character == CHAR_DOT) {
+      }// Assignment 4
+
+      else if(character == CHAR_OR){
+
+        get_character();
+        symbol = SYM_OR;
+      }
+      else if(character == CHAR_AND){
+
+        get_character();
+        symbol = SYM_AND;
+      }
+     
+      else if(character == CHAR_XORI){
+        get_character();
+        symbol = SYM_XORI;
+      } 
+      
+      else if (character == CHAR_DOT) {
         get_character();
 
         if (character == CHAR_DOT) {
@@ -5187,6 +5195,17 @@ uint64_t compile_factor() {
     type = UINT64_T;
   }
 
+  // Assignment 4
+
+  if(bit_not_shift()){
+
+    if (type != UINT64_T)
+      type_warning(UINT64_T, type);
+
+    // bitwise not
+    emit_xori(current_temporary(), current_temporary(), -1);
+  }
+
   if (negative) {
     if (type != UINT64_T) {
       type_warning(UINT64_T, type);
@@ -5259,14 +5278,34 @@ uint64_t is_bit_shift(){
     return 1;
   else if(symbol == SYM_R_BIT_SHIFT)
     return 1;
-  else if(symbol == SYM_AND) // Assignment 4
-    return 1;
   else if(symbol == SYM_OR)
     return 1;
-  else if(symbol == SYM_XORI)
+  else if(symbol == SYM_AND) // Assignment 4
+    return 1;
+  // else if(symbol == SYM_XORI)
+  //   return 1;
+  return 0;
+}
+
+uint64_t bit_not_shift(){
+  if(symbol == SYM_XORI)
     return 1;
   return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Assignment 3
 uint64_t compile_shift_expression(){
@@ -5275,9 +5314,12 @@ uint64_t compile_shift_expression(){
   uint64_t operator_symbol;
   uint64_t rtype;
 
+
+  printf("%s: 123!\n", selfie_name);
+
   // assert: n = allocated_temporaries
 
-  ltype = compile_term();
+  ltype = compile_simple_expression();
 
   // assert: allocated_temporaries == n + 1
 
@@ -5286,7 +5328,7 @@ uint64_t compile_shift_expression(){
 
     get_symbol();
 
-    rtype = compile_term();
+    rtype = compile_simple_expression();
 
     // assert: allocated_temporaries == n + 2
 
@@ -5299,17 +5341,22 @@ uint64_t compile_shift_expression(){
     }  
     else if(operator_symbol == SYM_R_BIT_SHIFT){
         emit_srl(previous_temporary(), previous_temporary(), current_temporary());
-      }
-    else if (operator_symbol == SYM_AND){//Assignment 4
-        emit_and(previous_temporary(), previous_temporary(), current_temporary());
     }
-    else if (operator_symbol == SYM_OR){//Assignment 4
-        emit_or(previous_temporary(), current_temporary(), previous_temporary());
-    }
-     else if (operator_symbol == SYM_XORI){//Assignment 4
-        emit_xori(previous_temporary(), previous_temporary(), current_temporary());
+    else if(operator_symbol == SYM_OR){
+        printf("%s: OR CALLED!\n", selfie_name);
+
+        emit_or(previous_temporary(), previous_temporary(), current_temporary());
     }
 
+    else if(operator_symbol == SYM_AND){
+        printf("%s: AND CALLED!\n", selfie_name);
+
+        emit_and(previous_temporary(), previous_temporary(), current_temporary());
+    }
+    // else if(operator_symbol == SYM_XORI){
+    //     emit_xori(previous_temporary(), previous_temporary(), current_temporary());
+    // }
+   
     
 
 
@@ -5339,7 +5386,7 @@ uint64_t compile_simple_expression() {
 
   // assert: n = allocated_temporaries
 
-  ltype = compile_shift_expression();
+  ltype = compile_term();
 
   // assert: allocated_tempor aries == n + 1
 
@@ -5349,7 +5396,7 @@ uint64_t compile_simple_expression() {
 
     get_symbol();
 
-    rtype = compile_shift_expression();
+    rtype = compile_term();
 
     // assert: allocated_temporaries == n + 2
 
@@ -5405,6 +5452,8 @@ uint64_t compile_simple_expression() {
   return ltype;
 }
 
+
+
 uint64_t compile_expression() {
   uint64_t ltype;
   uint64_t operator_symbol;
@@ -5413,7 +5462,7 @@ uint64_t compile_expression() {
   // assert: n = allocated_temporaries
 // === Assignment 3 
 
-  ltype = compile_simple_expression();  // === Assignment 3 
+  ltype = compile_shift_expression();  // === Assignment 3 
 
 
   // assert: allocated_temporaries == n + 1
@@ -5424,7 +5473,7 @@ uint64_t compile_expression() {
 
     get_symbol();
 
-    rtype = compile_simple_expression(); // === Assignment 3 
+    rtype = compile_shift_expression(); // === Assignment 3 
 
 
     // assert: allocated_temporaries == n + 2
@@ -7267,6 +7316,8 @@ void emit_and(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   ic_and = ic_and + 1;
 }
 void emit_or(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+   printf("%s: EMIT_OR CALLED!\n", selfie_name);
+
   emit_instruction(encode_r_format(F7_OR, rs2, rs1, F3_OR, rd, OP_OP));
   ic_or = ic_or + 1;
 }
@@ -9752,6 +9803,7 @@ void do_add() {
 // Assignment 4
 void do_and() {
   uint64_t next_rd_value;
+  printf("%s: DO_AND CALLED!\n", selfie_name);
 
   read_register(rs1);
   read_register(rs2);
@@ -9775,6 +9827,7 @@ void do_and() {
 }
 void do_or() {
   uint64_t next_rd_value;
+    printf("%s: DO_OR CALLED!\n", selfie_name);
 
   read_register(rs1);
   read_register(rs2);
@@ -9798,14 +9851,13 @@ void do_or() {
 }
 
 void do_xori() {
-  uint64_t next_rd_value;
+    uint64_t next_rd_value;
 
-  read_register(rs1);
-  read_register(rs2);
+  read_register_wrap(rs1, imm);
 
   if (rd != REG_ZR) {
-    // semantics of add // Debug!!
-    next_rd_value = *(registers + rs1) != *(registers + rs2);
+    // semantics of addi
+    next_rd_value = (*(registers + rs1) | imm) & (*(registers + rs1) & imm);
 
     if (*(registers + rd) != next_rd_value)
       *(registers + rd) = next_rd_value;
@@ -10737,6 +10789,8 @@ void decode() {
 
     if (funct3 == F3_ADDI)
       is = ADDI;
+    else if(funct3 == F3_XORI)
+      is = XORI;
   } else if (opcode == OP_LOAD) {
     decode_i_format();
 
@@ -10757,28 +10811,12 @@ void decode() {
     decode_r_format();
 
     // Assignment 3
-     if(funct3 == F3_SLL){
+    if(funct3 == F3_SLL){
       if(funct7 == F7_SLL)
         is = SLL;
-     }
-    else if(funct3 == F3_SRL){
-      if(funct7 == F7_SRL)
-        is = SRL;
-    } 
+     }  
 
-    // Assignment 4
-
-   
-    if (funct3 == F3_OR){
-      if(funct7 == F3_OR)
-        is = OR;
-    } else if(funct3 == F3_XORI){
-      if(funct7 == F3_XORI)
-        is = XORI;
-    }
-    
-
-    if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
+    else if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
       if (funct7 == F7_ADD)
         is = ADD;
       else if (funct7 == F7_SUB)
@@ -10799,6 +10837,20 @@ void decode() {
       if (funct7 == F7_SLTU)
         is = SLTU;
     }
+      // Assignment 4
+
+   
+    else if (funct3 == F3_OR){
+      printf("%s: FUNCT3 OR CALLED!\n", selfie_name);
+      if(funct7 == F7_OR)
+        is = OR;
+    }
+    // else if(funct3 == F3_XORI){
+    //         printf("%s: FUNCT3 XORI CALLED!\n", selfie_name);
+
+    //   if(funct7 == F7_XORI)
+    //     is = XORI;
+    // }
   } else if (opcode == OP_BRANCH) {
     decode_b_format();
 
@@ -10851,6 +10903,9 @@ void execute() {
     return;
   }
 
+  printf("%s: EXECUTE CALLED!\n", selfie_name);
+
+
   // assert: 1 <= is <= number of RISC-U instructions
   if (is == ADDI)
     do_addi();
@@ -10868,16 +10923,6 @@ void execute() {
     do_divu();
   else if (is == REMU)
     do_remu();
-  else if (is == SLTU)
-    do_sltu();
-  else if (is == BEQ)
-    do_beq();
-  else if (is == JAL)
-    do_jal();
-  else if (is == JALR)
-    do_jalr();
-  else if (is == LUI)
-    do_lui();
   else if (is == SLL)   //Assignment3
     do_sll();
   else if(is == SRL)   //Assignment3
@@ -10888,6 +10933,16 @@ void execute() {
     do_or();
   else if(is == XORI)
     do_xori();
+  else if (is == SLTU)
+    do_sltu();
+  else if (is == BEQ)
+    do_beq();
+  else if (is == JAL)
+    do_jal();
+  else if (is == JALR)
+    do_jalr();
+  else if (is == LUI)
+    do_lui();
   else if (is == ECALL)
     do_ecall();
  
