@@ -4234,14 +4234,12 @@ void get_symbol() {
         symbol = SYM_OR;
       }
       else if(character == CHAR_AND){
-        //printf("%s: HANS MAULWURF", selfie_name);
 
         get_character();
         symbol = SYM_AND;
       }
      
       else if(character == CHAR_XORI){
-        printf("%s: HANS MAULWURF DETECTED", selfie_name);
         get_character();
         symbol = SYM_XORI;
       } 
@@ -5392,13 +5390,11 @@ uint64_t compile_shift_expression(){
     }
   
     else if(operator_symbol == SYM_OR){
-        printf("%s: OR CALLED!\n", selfie_name);
 
         emit_or(previous_temporary(), previous_temporary(), current_temporary());
     }
 
     else if(operator_symbol == SYM_AND){
-        printf("%s: AND CALLED!\n", selfie_name);
 
         emit_and(previous_temporary(), previous_temporary(), current_temporary());
     }
@@ -7363,7 +7359,6 @@ void emit_and(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   ic_and = ic_and + 1;
 }
 void emit_or(uint64_t rd, uint64_t rs1, uint64_t rs2) {
-   printf("%s: EMIT_OR CALLED!\n", selfie_name);
 
   emit_instruction(encode_r_format(F7_OR, rs2, rs1, F3_OR, rd, OP_OP));
   ic_or = ic_or + 1;
