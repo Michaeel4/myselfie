@@ -261,7 +261,26 @@ uint64_t CHAR_XORI         = '~';
 uint64_t CHAR_BACKSLASH    =  92; // ASCII code 92 = backslash
 uint64_t CHAR_DOT          = '.';
 
+// Assignment 5
+uint64_t CHAR_LBRACKET = '[';
+uint64_t CHAR_RBRACKET = ']';
+
+
 // Assignment 4
+
+
+// Assignment 5 Notes for myself: 
+// as stated in the slides, in the decleration of an array there is:
+// - no code generation
+// - only symbol table entry
+// - calculate size of array
+// Decleration is a compile time concept. 
+// so one has to create the table entry and allocate memory for the declared array.
+// NO runtime logic needed for this. 
+
+
+
+
 
 
 
@@ -469,16 +488,24 @@ uint64_t SYM_R_BIT_SHIFT = 30; // >>
 uint64_t SYM_AND = 31; // &
 uint64_t SYM_OR = 32; // |
 uint64_t SYM_XORI = 33; // tidal
+
+// Assignment 5
+
+uint64_t SYM_LBRACKET = 34;
+uint64_t SYM_RBRACKET = 35;
+
 // symbols for bootstrapping
 
-uint64_t SYM_INT      = 34; // int
-uint64_t SYM_CHAR     = 35; // char
-uint64_t SYM_UNSIGNED = 36; // unsigned
+uint64_t SYM_INT      = 36; // int
+uint64_t SYM_CHAR     = 37; // char
+uint64_t SYM_UNSIGNED = 38; // unsigned
 
 
 
 
-uint64_t SYM_CONST    = 37; // const
+
+
+uint64_t SYM_CONST    = 39; // const
 
 
 // =====================
@@ -558,6 +585,11 @@ void init_scanner () {
   *(SYMBOLS + SYM_L_BIT_SHIFT) = (uint64_t) "<<";
   *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
 
+  // Assignment 5
+    *(SYMBOLS + SYM_LBRACKET) = (uint64_t) "[";
+    *(SYMBOLS + SYM_RBRACKET) = (uint64_t) "]";
+
+
  
 
 
@@ -610,6 +642,9 @@ uint64_t is_undefined_procedure(uint64_t* entry);
 uint64_t is_library_procedure(char* name);
 uint64_t report_undefined_procedures();
 
+
+// Assignment 5 
+// as stated, we need somehow a new table entry. 
 // symbol table entry:
 // +---+---------+
 // | 0 | next    | pointer to next entry
@@ -620,10 +655,11 @@ uint64_t report_undefined_procedures();
 // | 5 | value   | VARIABLE: initial value
 // | 6 | address | VARIABLE, BIGINT, STRING: offset, PROCEDURE: address
 // | 7 | scope   | REG_GP (global), REG_S0 (local)
+// | 8 | array   | // Assignment 5
 // +---+---------+
 
 uint64_t* allocate_symbol_table_entry() {
-  return smalloc(2 * SIZEOFUINT64STAR + 6 * SIZEOFUINT64);
+  return smalloc(3 * SIZEOFUINT64STAR + 6 * SIZEOFUINT64);
 }
 
 uint64_t* get_next_entry(uint64_t* entry)  { return (uint64_t*) *entry; }
@@ -634,6 +670,8 @@ uint64_t  get_type(uint64_t* entry)        { return             *(entry + 4); }
 uint64_t  get_value(uint64_t* entry)       { return             *(entry + 5); }
 uint64_t  get_address(uint64_t* entry)     { return             *(entry + 6); }
 uint64_t  get_scope(uint64_t* entry)       { return             *(entry + 7); }
+// Assignment 5
+uint64_t  get_array(uint64_t* entry)       { return             *(entry + 8); }
 
 void set_next_entry(uint64_t* entry, uint64_t* next) { *entry       = (uint64_t) next; }
 void set_string(uint64_t* entry, char* identifier)   { *(entry + 1) = (uint64_t) identifier; }
@@ -643,6 +681,8 @@ void set_type(uint64_t* entry, uint64_t type)        { *(entry + 4) = type; }
 void set_value(uint64_t* entry, uint64_t value)      { *(entry + 5) = value; }
 void set_address(uint64_t* entry, uint64_t address)  { *(entry + 6) = address; }
 void set_scope(uint64_t* entry, uint64_t scope)      { *(entry + 7) = scope; }
+void set_array(uint64_t* entry, uint64_t scope)      { *(entry + 8) = scope; }
+
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -747,6 +787,10 @@ uint64_t  compile_factor();
 uint64_t  compile_term();
 // Assignment 3
 uint64_t  compile_shift_expression();
+
+// Assignment 5
+
+uint64_t compile_selector_expression();
 
 
 uint64_t  compile_simple_expression();
@@ -4245,6 +4289,18 @@ void get_symbol() {
         get_character();
         symbol = SYM_XORI;
       } 
+
+      // Assignment 5
+
+      else if(character == CHAR_LBRACKET){
+
+        get_character();
+        symbol = SYM_LBRACKET;
+      } else if(character == CHAR_RBRACKET){
+
+        get_character();
+        symbol = SYM_RBRACKET;
+      }
       
       else if (character == CHAR_DOT) {
         get_character();
