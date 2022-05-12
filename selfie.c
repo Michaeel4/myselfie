@@ -6183,7 +6183,9 @@ uint64_t* compile_variable(uint64_t offset) {
 
         tfree(1);
 
-        get_symbol();
+        
+
+
 
         
       }
