@@ -792,7 +792,14 @@ uint64_t  compile_term();
 // Assignment 3
 uint64_t  compile_shift_expression();
 
+
 // Assignment 5
+
+uint64_t compile_selector();
+uint64_t set_array_size();
+
+//uint64_t load_array_element();
+
 
 //uint64_t compile_selector_expression();
 
@@ -5190,9 +5197,6 @@ uint64_t compile_factor() {
       get_symbol();
   }
 
-  // Assignment 5
- 
-
   // optional: cast
   if (symbol == SYM_LPARENTHESIS) {
     get_symbol();
@@ -5244,14 +5248,15 @@ uint64_t compile_factor() {
   } else
     dereference = 0;
 
-    // Assignment 5: Seems like here the variable is loaded from the memory
-
   // variable or call?
   if (symbol == SYM_IDENTIFIER) {
     variable_or_procedure_name = identifier;
 
+   
+
     get_symbol();
 
+    
     if (symbol == SYM_LPARENTHESIS) {
       get_symbol();
 
@@ -5266,12 +5271,38 @@ uint64_t compile_factor() {
       // reset return register to initial return value
       // for missing return expressions
       emit_addi(REG_A0, REG_ZR, 0);
+    }else if(symbol == SYM_LBRACKET) {
+
+        get_symbol();
+        compile_selector();
+
+
+        tfree(1);
+
+        if(symbol != SYM_RBRACKET){
+
+
+          syntax_error_symbol(SYM_RBRACKET);
+
+
+        }
+
+        get_symbol();
+
+        // left off1
+
+        //type = load_array_element(variable_or_procedure_name, literal);
+
+
+
+
     } else
       // variable access: identifier
       type = load_variable_or_big_int(variable_or_procedure_name, VARIABLE);
 
   // integer literal?
-  } else if (symbol == SYM_INTEGER) {
+  } 
+  else if (symbol == SYM_INTEGER) {
     load_integer(literal);
 
     get_symbol();
@@ -5299,7 +5330,7 @@ uint64_t compile_factor() {
   // "(" expression ")" ?
   
   }
-
+  
   
    else if (symbol == SYM_LPARENTHESIS) {
     get_symbol();
@@ -5337,6 +5368,9 @@ uint64_t compile_factor() {
     emit_sub(current_temporary(), REG_ZR, current_temporary());
   }
 
+  
+  
+
   // assert: allocated_temporaries == n + 1
 
   if (has_cast)
@@ -5346,7 +5380,6 @@ uint64_t compile_factor() {
     // type of factor is grammar attribute
     return type;
 }
-
 
 
 // uint64_t compile_not_shift(){
@@ -5482,6 +5515,8 @@ uint64_t compile_shift_expression(){
   uint64_t operator_symbol;
   uint64_t rtype;
 
+  uint64_t is_array;
+
 
   //printf("%s: 123!\n", selfie_name);
 
@@ -5490,6 +5525,11 @@ uint64_t compile_shift_expression(){
   ltype = compile_simple_expression();
 
   // assert: allocated_temporaries == n + 1
+
+  if(symbol == SYM_LBRACKET){
+
+    is_array = compile_selector();
+  }
 
   while (is_bit_shift()) {
     operator_symbol = symbol;
@@ -5512,13 +5552,12 @@ uint64_t compile_shift_expression(){
     }
   
     else if(operator_symbol == SYM_OR){
-        printf("%s: OR CALLED!\n", selfie_name);
 
         emit_or(previous_temporary(), previous_temporary(), current_temporary());
     }
 
     else if(operator_symbol == SYM_AND){
-        printf("%s: AND CALLED!\n", selfie_name);
+        //printf("%s: AND CALLED!\n", selfie_name);
 
         emit_and(previous_temporary(), previous_temporary(), current_temporary());
     }
@@ -6120,26 +6159,65 @@ uint64_t compile_type() {
 uint64_t* compile_variable(uint64_t offset) {
   uint64_t type;
   uint64_t* entry;
+  //uint64_t array_memory;
 
   type = compile_type();
 
+  //char* variable_name;
+
   
 
-  if(symbol == SYM_IDENTIFIER){
-
-    if(symbol == SYM_LBRACKET){
-      printf("%s got the ident", selfie_name);
-    entry = create_symbol_table_entry_array(LOCAL_TABLE, identifier, line_number,VARIABLE, type, 0, offset,offset);
-    }
-  }
+  
 
   if (symbol == SYM_IDENTIFIER) {
 
     
+
+    if(symbol == SYM_LBRACKET){
+
+      get_symbol();
+
+      if(symbol != SYM_RBRACKET){
+
+        compile_expression();
+
+        tfree(1);
+
+        get_symbol();
+
+        
+      }
+
+    }
     // TODO: check if identifier has already been declared
     entry = create_symbol_table_entry(LOCAL_TABLE, identifier, line_number, VARIABLE, type, 0, offset);
 
+    //variable_name = identifier;
+
+    //create_symbol_table_entry(LOCAL_TABLE, variable_name, line_number, VARIABLE, type, 0, offset);
     get_symbol();
+
+    if(symbol == SYM_LBRACKET){
+
+      type = compile_selector();
+    }
+
+
+    // if(symbol == SYM_LBRACKET){
+
+
+    //   array_memory = set_array_size();
+
+    //   if(array_memory > 0){
+
+    //     set_dim(get_variable_or_big_int(variable_name, VARIABLE), 1);
+    //     set_address(get_variable_or_big_int(variable_name, VARIABLE), 1);
+
+    //   } else {
+
+    //     set_dim(get_variable_or_big_int(variable_name, VARIABLE), 0);
+    //   }
+    // }
   } else {
     syntax_error_symbol(SYM_IDENTIFIER);
 
@@ -6174,7 +6252,6 @@ uint64_t compile_initialization(uint64_t type) {
   if (symbol == SYM_ASSIGN) {
     get_symbol();
 
-    printf("%s called integer sym", selfie_name);
 
     // optional: [ cast ]
     if (symbol == SYM_LPARENTHESIS) {
@@ -6225,9 +6302,95 @@ uint64_t compile_initialization(uint64_t type) {
 }
 
 
-compile_array_selector(){
+uint64_t compile_selector(){
+
+
+  if(symbol == SYM_LBRACKET){
+
+    get_symbol();
+
+    compile_shift_expression();
+    
+  }
+
+  if(symbol == SYM_RBRACKET){
+
+    get_symbol();
+    return 1;
+  } else
+    syntax_error_symbol(SYM_RBRACKET);
+
+  return 0;
+  
+}
+
+
+uint64_t set_array_size(){
+
+  uint64_t array_size;
+
+  array_size = 0;
+  get_symbol();
+
+  if(is_int_or_char_literal()){
+
+    array_size = literal;
+
+
+    get_symbol();
+
+
+    if(symbol== SYM_RBRACKET){
+
+
+      get_symbol();
+      return array_size;
+    } else 
+        syntax_error_symbol(SYM_RBRACKET);
+    }
+  return array_size;
+
+
+  } 
+  
+
 
   
+
+
+
+
+void calculate_array_address(uint64_t* entry){
+
+
+  uint64_t ltype;
+
+  ltype = get_type(entry);
+
+  load_integer(WORDSIZE);
+
+  emit_mul(previous_temporary(), previous_temporary(), current_temporary());
+
+  tfree(1);
+
+  load_integer(get_address(entry));
+
+  if(ltype == UINT64_T){
+
+    emit_add(previous_temporary(), previous_temporary(), current_temporary());
+
+    emit_add(previous_temporary(), previous_temporary(), get_scope(entry));
+
+    tfree(1);
+  }
+  else {
+    emit_add(current_temporary(), current_temporary(), get_scope(entry));
+    emit_load(current_temporary(), current_temporary(), 0);
+    emit_add(previous_temporary(), previous_temporary(), current_temporary());
+    tfree(1);
+}
+
+
 }
 
 void compile_procedure(char* procedure, uint64_t type) {
@@ -6352,19 +6515,53 @@ void compile_procedure(char* procedure, uint64_t type) {
 
     number_of_local_variable_bytes = 0;
 
-
     // this seems to be the part where we compile local variables Assignment 5
+        
+
+  
+    
+    
     while (symbol == SYM_UINT64) {
-   printf("%s semiclolon called", selfie_name);
       number_of_local_variable_bytes = number_of_local_variable_bytes + WORDSIZE;
 
       // offset of local variables relative to frame pointer is negative
       compile_variable(-number_of_local_variable_bytes);
 
 
+      
+      // if(symbol == SYM_LBRACKET){
+
+      //   compile_selector();
+      // }
       // // Assignment 5 solution for unexpected symbol found.
       // if(symbol == SYM_LBRACKET){
       //   get_symbol();
+
+      //   if(symbol == SYM_INTEGER){
+
+
+      //     printf("%lu offset value is", symbol);
+
+      //     get_symbol();
+        
+
+      //   if(symbol == SYM_RBRACKET){
+
+      //     get_symbol();
+
+      //     if(symbol == SYM_SEMICOLON){
+      //         // Assignment 5: Here we create a new array, because its cleary a new assignment. 
+      //         // as no assign symbol is inside this state.
+      //     }
+
+          
+          
+      //   }
+
+      // }
+      // }
+
+     
 
       //   if(symbol == SYM_INTEGER){
       //     get_symbol();
@@ -6391,7 +6588,9 @@ void compile_procedure(char* procedure, uint64_t type) {
       //       }
       //     }
       //   }
-      // }
+      
+    
+
       
       if (symbol == SYM_SEMICOLON){
      
@@ -6400,6 +6599,10 @@ void compile_procedure(char* procedure, uint64_t type) {
       else
         syntax_error_symbol(SYM_SEMICOLON);
     }
+
+
+
+   
 
     procedure_prologue(number_of_local_variable_bytes);
 
@@ -6454,7 +6657,12 @@ void compile_cstar() {
   uint64_t current_line_number;
   uint64_t initial_value;
   uint64_t* entry;
-  uint64_t* entry1;
+
+  uint64_t is_array;
+  uint64_t array_size;
+
+  array_size = 1;
+  is_array = 0;
 
 
   while (symbol != SYM_EOF) {
@@ -6498,56 +6706,61 @@ void compile_cstar() {
 
         get_symbol();
 
-         // type identifier "["
-        if(symbol == SYM_LBRACKET){
-            printf("%s got the lbracket", selfie_name);
-            get_symbol();
+        //  // type identifier "["
+        // if(symbol == SYM_LBRACKET){
+        //     printf("%s got the lbracket", selfie_name);
+        //     get_symbol();
 
-            if(symbol == SYM_INTEGER){
+        //     if(symbol == SYM_INTEGER){
 
-              get_symbol();
-              if(symbol == SYM_RBRACKET){
+        //       get_symbol();
+        //       if(symbol == SYM_RBRACKET){
 
-                get_symbol();
+        //         get_symbol();
 
-            if(symbol == SYM_SEMICOLON){
-              get_symbol();
-            current_line_number = line_number;
-            data_size = data_size + WORDSIZE;
-            entry1 = search_global_symbol_table(variable_or_procedure_name, VARIABLE);
+        //     if(symbol == SYM_SEMICOLON){
+        //       get_symbol();
+        //     current_line_number = line_number;
+        //     data_size = data_size + WORDSIZE;
+        //     entry1 = search_global_symbol_table(variable_or_procedure_name, VARIABLE);
 
-          if (entry1 == (uint64_t*) 0) {
+        //   if (entry1 == (uint64_t*) 0) {
 
-            printf("%s, entry is empty", selfie_name);
-            // allocate memory for global variable in data segment
-            data_size = data_size + WORDSIZE;
+        //     printf("%s, entry is empty", selfie_name);
+        //     // allocate memory for global variable in data segment
+        //     data_size = data_size + WORDSIZE;
 
 
-            entry1 = create_symbol_table_entry_array(GLOBAL_TABLE, variable_or_procedure_name, current_line_number, VARIABLE, type, initial_value, -data_size, initial_value);
+        //     entry1 = create_symbol_table_entry_array(GLOBAL_TABLE, variable_or_procedure_name, current_line_number, VARIABLE, type, initial_value, -data_size, initial_value);
             
-          }
-                }
-              }
+        //   }
+        //         }
+        //       }
            
-            }
+        //     }
 
-        }
+        // }
 
        
 
-         else if(symbol == SYM_LPARENTHESIS)
+         if(symbol == SYM_LPARENTHESIS)
           // type identifier "(" ...
           // procedure declaration or definition
           compile_procedure(variable_or_procedure_name, type);
         else {
           current_line_number = line_number;
 
+          if(symbol == SYM_LBRACKET){
+            array_size = set_array_size();
+
+            is_array = 1;
+          }
+
            if (symbol == SYM_SEMICOLON) {
             // type identifier ";" ...
             // global variable declaration
             get_symbol();
 
-            printf("%s semicolon called", selfie_name);
 
             // uninitialized global variables are initialized to 0
             initial_value = 0;
@@ -6561,6 +6774,8 @@ void compile_cstar() {
           if (entry == (uint64_t*) 0) {
             // allocate memory for global variable in data segment
             data_size = data_size + WORDSIZE;
+            data_size = data_size + WORDSIZE * array_size;
+
 
             create_symbol_table_entry(GLOBAL_TABLE, variable_or_procedure_name, current_line_number, VARIABLE, type, initial_value, -data_size);
           } else {
@@ -7606,7 +7821,6 @@ void emit_and(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   ic_and = ic_and + 1;
 }
 void emit_or(uint64_t rd, uint64_t rs1, uint64_t rs2) {
-   printf("%s: EMIT_OR CALLED!\n", selfie_name);
 
   emit_instruction(encode_r_format(F7_OR, rs2, rs1, F3_OR, rd, OP_OP));
   ic_or = ic_or + 1;
@@ -10093,7 +10307,6 @@ void do_add() {
 // Assignment 4
 void do_and() {
   uint64_t next_rd_value;
-  printf("%s: DO_AND CALLED!\n", selfie_name);
 
   read_register(rs1);
   read_register(rs2);
@@ -10117,7 +10330,6 @@ void do_and() {
 }
 void do_or() {
   uint64_t next_rd_value;
-    printf("%s: DO_OR CALLED!\n", selfie_name);
 
   read_register(rs1);
   read_register(rs2);
@@ -11129,7 +11341,6 @@ void decode() {
 
    
     else if (funct3 == F3_OR){
-      printf("%s: FUNCT3 OR CALLED!\n", selfie_name);
       if(funct7 == F7_OR)
         is = OR;
     }
@@ -11186,7 +11397,6 @@ void execute() {
     return;
   }
 
-  printf("%s: EXECUTE CALLED!\n", selfie_name);
 
 
   // assert: 1 <= is <= number of RISC-U instructions
