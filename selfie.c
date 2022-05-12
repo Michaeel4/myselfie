@@ -235,10 +235,6 @@ uint64_t UINT_MAX;       // maximum numerical value of target-dependent unsigned
 uint64_t WORDSIZE       = 8;  // target-dependent word size in bytes
 uint64_t WORDSIZEINBITS = 64; // WORDSIZE * 8
 
-// amount of entries of the context struct
-// contexts are extended in the symbolic execution engine and the Boehm garbage collector
-uint64_t CONTEXTENTRIES;
-
 uint64_t CHAR_EOF          =  -1; // end of file
 uint64_t CHAR_BACKSPACE    =   8; // ASCII code 8  = backspace
 uint64_t CHAR_TAB          =   9; // ASCII code 9  = tabulator
@@ -289,9 +285,6 @@ uint64_t CHAR_RBRACKET = ']';
 
 
 
-
-
-// Assignment 4
 
 
 
@@ -388,9 +381,6 @@ void init_library() {
   // compute 64-bit signed integer range using unsigned integer arithmetic
   INT64_MIN = two_to_the_power_of(SIZEOFUINT64INBITS - 1);
   INT64_MAX = INT64_MIN - 1;
-
-  // 9 uint64_t entries and 16 uint64_t* entries
-  CONTEXTENTRIES = 9 + 16;
 
   // target-dependent, see init_target()
   SIZEOFUINT     = SIZEOFUINT64;
@@ -508,10 +498,6 @@ uint64_t SYM_XORI = 33; // tidal
 uint64_t SYM_LBRACKET = 34;
 uint64_t SYM_RBRACKET = 35;
 
-// Assignment 4
-uint64_t SYM_AND = 31; // &
-uint64_t SYM_OR = 32; // |
-uint64_t SYM_XORI = 33; // tidal
 // symbols for bootstrapping
 
 uint64_t SYM_INT      = 36; // int
@@ -606,7 +592,6 @@ void init_scanner () {
   // Assignment 5
     *(SYMBOLS + SYM_LBRACKET) = (uint64_t) "[";
     *(SYMBOLS + SYM_RBRACKET) = (uint64_t) "]";
-
 
 
  
@@ -817,7 +802,6 @@ uint64_t set_array_size();
 
 
 //uint64_t compile_selector_expression();
-
 
 
 uint64_t  compile_simple_expression();
@@ -2399,9 +2383,10 @@ uint64_t* delete_context(uint64_t* context, uint64_t* from);
 
 uint64_t* allocate_context(); // declaration avoids warning in the Boehm garbage collector
 
+// CAUTION: contexts are extended in the symbolic execution engine and the Boehm garbage collector!
+
 uint64_t* allocate_context() {
-  // SIZEOFUINT64 == SIZEOFUINT64STAR (always, so no need to differentiate although it would be nicer)
-  return smalloc(CONTEXTENTRIES * SIZEOFUINT64);
+  return smalloc(9 * SIZEOFUINT64STAR + 16 * SIZEOFUINT64);
 }
 
 uint64_t next_context(uint64_t* context)    { return (uint64_t) context; }
@@ -4315,6 +4300,8 @@ void get_symbol() {
         symbol = SYM_XORI;
       } 
 
+
+     
       else if (character == CHAR_DOT) {
         get_character();
 
@@ -5343,7 +5330,7 @@ uint64_t compile_factor() {
   // "(" expression ")" ?
   
   }
-
+  
   
    else if (symbol == SYM_LPARENTHESIS) {
     get_symbol();
@@ -5393,38 +5380,6 @@ uint64_t compile_factor() {
     // type of factor is grammar attribute
     return type;
 }
-
-
-// uint64_t compile_not_shift(){
-//   uint64_t val;
-
-//   if(is_neg()){
-//     get_symbol();
-//     val = compile_factor();
-  
-//     emit_xori(current_temporary(), current_temporary(), -1);
-//     //tfree(1);
-//   }else{
-//     val = compile_factor();
-//   }
-//   return val;
-
-// }
-
-uint64_t compile_not_expression(){
-  uint64_t ltype;
-  //uint64_t operator_symbol;
-  // uint64_t rtype;
-  //printf("%s: 123!\n", selfie_name);
-
-  // assert: n = allocated_temporaries
-
-
-  // assert: allocated_temporaries == n + 1
-
-  if(is_not_shift()) {
-    //operator_symbol = symbol;
-
 
 
 // uint64_t compile_not_shift(){
@@ -5544,17 +5499,6 @@ uint64_t is_not_shift(){
     return 0;
 }
 
-}
-
-// uint64_t bit_not_shift(){
-//   if(symbol == SYM_XORI)
-//     return 1;
-//   return 0;
-// }
-
-
-
-
 
 
 
@@ -5572,7 +5516,6 @@ uint64_t compile_shift_expression(){
   uint64_t rtype;
 
   uint64_t is_array;
-
 
 
   //printf("%s: 123!\n", selfie_name);
@@ -10367,7 +10310,6 @@ void do_add() {
 void do_and() {
   uint64_t next_rd_value;
 
-
   read_register(rs1);
   read_register(rs2);
 
@@ -10390,7 +10332,6 @@ void do_and() {
 }
 void do_or() {
   uint64_t next_rd_value;
-
 
   read_register(rs1);
   read_register(rs2);
@@ -11402,8 +11343,6 @@ void decode() {
 
    
     else if (funct3 == F3_OR){
-
-      printf("%s: FUNCT3 OR CALLED!\n", selfie_name);
       if(funct7 == F7_OR)
         is = OR;
     }
@@ -11459,9 +11398,6 @@ void execute() {
 
     return;
   }
-
-
-  printf("%s: EXECUTE CALLED!\n", selfie_name);
 
 
 
