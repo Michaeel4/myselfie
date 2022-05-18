@@ -11,10 +11,15 @@ C\* is a tiny subset of the programming language C. C\* features global variable
 C\* Keywords: `uint64_t`, `void`, `if`, `else`, `while`, `return`
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 C\* Symbols: `integer_literal`, `character_literal`, `string_literal`, `identifier`, `,`, `;`, `(`, `)`, `{`, `}`, `+`, `-`, `*`, `/`, `%`, `=`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `..., <<, >>, &, |, ~`
 =======
 C\* Symbols: `integer_literal`, `character_literal`, `string_literal`, `identifier`, `,`, `;`, `(`, `), [,],` `{`,`}`, `+`, `-`, `*`, `/`, `%`, `=`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `..., <<, >>`
 >>>>>>> Assignment5
+=======
+C\* Symbols: `integer_literal`, `character_literal`, `string_literal`, `identifier`, `,`, `;`, `(`, `), [,],` `{`,`}`, `+`, `-`, `*`, `/`, `%`, `=`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `..., <<, >>,  &, |, ~`
+=======
+>>>>>>> f23fcfbb225258499ea2e1d2467e42ece367c527
 
 with:
 
