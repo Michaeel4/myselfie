@@ -5522,7 +5522,7 @@ uint64_t compile_shift_expression(){
   uint64_t operator_symbol;
   uint64_t rtype;
 
-  uint64_t is_array;
+  //uint64_t is_array;
 
 
   //printf("%s: 123!\n", selfie_name);
@@ -5533,10 +5533,10 @@ uint64_t compile_shift_expression(){
 
   // assert: allocated_temporaries == n + 1
 
-  if(symbol == SYM_LBRACKET){
+  // if(symbol == SYM_LBRACKET){
 
-    is_array = compile_selector();
-  }
+  //   is_array = compile_selector();
+  // }
 
   while (is_bit_shift()) {
     operator_symbol = symbol;
@@ -6063,11 +6063,9 @@ void compile_statement() {
   uint64_t* entry;
   uint64_t offset;
   uint64_t is_array;
-  uint64_t is_struct;
 
   is_array = 0;
 
-  is_struct = 0;
 
   // assert: allocated_temporaries == 0
 
