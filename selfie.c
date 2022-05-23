@@ -234,7 +234,8 @@ uint64_t UINT_MAX;       // maximum numerical value of target-dependent unsigned
 
 uint64_t WORDSIZE       = 8;  // target-dependent word size in bytes
 uint64_t WORDSIZEINBITS = 64; // WORDSIZE * 8
-
+ // 9 uint64_t entries and 16 uint64_t* entries
+uint64_t CONTEXTENTRIES;
 uint64_t CHAR_EOF          =  -1; // end of file
 uint64_t CHAR_BACKSPACE    =   8; // ASCII code 8  = backspace
 uint64_t CHAR_TAB          =   9; // ASCII code 9  = tabulator
@@ -352,6 +353,8 @@ void init_library() {
     return;
 
   SELFIE_URL = "selfie.cs.uni-salzburg.at";
+  // 9 uint64_t entries and 16 uint64_t* entries
+  CONTEXTENTRIES = 9 + 16;
 
   // determine actual size of uint64_t
   SIZEOFUINT64       = (uint64_t) ((uint64_t*) SELFIE_URL + 1) - (uint64_t) SELFIE_URL;
@@ -2392,8 +2395,8 @@ uint64_t* allocate_context(); // declaration avoids warning in the Boehm garbage
 // CAUTION: contexts are extended in the symbolic execution engine and the Boehm garbage collector!
 
 uint64_t* allocate_context() {
-  return smalloc(9 * SIZEOFUINT64STAR + 16 * SIZEOFUINT64);
-}
+  return smalloc(CONTEXTENTRIES * SIZEOFUINT64);
+  }
 
 uint64_t next_context(uint64_t* context)    { return (uint64_t) context; }
 uint64_t prev_context(uint64_t* context)    { return (uint64_t) (context + 1); }
