@@ -54,6 +54,7 @@ The parameter `imm` denotes a signed integer value represented by a fixed number
 
 `xori rd,rs1,imm`: `rd = ~(rs1 + imm); pc = pc + 4`
 
+
 #### Comparison
 
 `sltu rd,rs1,rs2`: `if (rs1 < rs2) { rd = 1 } else { rd = 0 } pc = pc + 4` where the values of `rs1` and `rs2` are interpreted as unsigned integers.
