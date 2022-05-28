@@ -6603,7 +6603,7 @@ void compile_cstar() {
 
         get_symbol();
 
-        if (symbol == SYM_LPARENTHESIS)
+        if(symbol == SYM_LPARENTHESIS)
           // type identifier "(" ...
           // procedure declaration or definition
           compile_procedure(variable_or_procedure_name, type);
@@ -6649,7 +6649,7 @@ void compile_cstar() {
 
           if (entry == (uint64_t*) 0) {
             // allocate memory for global variable in data segment
-            data_size = data_size + WORDSIZE * array_allocation_size;
+            //data_size = data_size + WORDSIZE * array_size;
 
             create_symbol_table_entry(GLOBAL_TABLE, variable_or_procedure_name, current_line_number, VARIABLE, type, initial_value, -data_size);
 
