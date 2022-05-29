@@ -1486,12 +1486,6 @@ uint64_t* allocate_cache() {
   return smalloc(1 * SIZEOFUINT64STAR + 6 * SIZEOFUINT64);
 }
 
-uint64_t* allocate_context(); // declaration avoids warning in the Boehm garbage collector
-
-uint64_t* allocate_context() {
-  // SIZEOFUINT64 == SIZEOFUINT64STAR (always, so no need to differentiate although it would be nicer)
-  return smalloc(CONTEXTENTRIES * SIZEOFUINT64);
-}
 
 uint64_t* get_cache_memory(uint64_t* cache)     { return (uint64_t*) *cache; }
 uint64_t  get_cache_size(uint64_t* cache)       { return             *(cache + 1); }
@@ -2402,10 +2396,9 @@ uint64_t* delete_context(uint64_t* context, uint64_t* from);
 
 uint64_t* allocate_context(); // declaration avoids warning in the Boehm garbage collector
 
-// CAUTION: contexts are extended in the symbolic execution engine and the Boehm garbage collector!
-
 uint64_t* allocate_context() {
-  return smalloc(9 * SIZEOFUINT64STAR + 16 * SIZEOFUINT64);
+  // SIZEOFUINT64 == SIZEOFUINT64STAR (always, so no need to differentiate although it would be nicer)
+  return smalloc(CONTEXTENTRIES * SIZEOFUINT64);
 }
 
 uint64_t next_context(uint64_t* context)    { return (uint64_t) context; }
