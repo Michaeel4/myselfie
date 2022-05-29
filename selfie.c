@@ -3902,7 +3902,25 @@ void get_symbol() {
         } else
           symbol = SYM_GT;
 
-      } else if (character == CHAR_DOT) {
+      }
+
+      else if(character == CHAR_OR){
+
+        get_character();
+        symbol = SYM_OR;
+      }
+      else if(character == CHAR_AND){
+
+        get_character();
+        symbol = SYM_AND;
+      }
+     
+      else if(character == CHAR_XORI){
+        get_character();
+        symbol = SYM_XORI;
+      } 
+      
+      else if (character == CHAR_DOT) {
         get_character();
 
         if (character == CHAR_DOT) {
@@ -4912,6 +4930,115 @@ uint64_t compile_term() {
   // type of term is grammar attribute
   return ltype;
 }
+
+
+// == Assignment 3
+
+// Assignment 4
+uint64_t is_bit_shift(){
+  if(symbol == SYM_L_BIT_SHIFT)
+    return 1;
+  else if(symbol == SYM_R_BIT_SHIFT)
+    return 1;
+  // else if(symbol == SYM_XORI)
+  //   return 1;
+  else if(symbol == SYM_OR)
+    return 1;
+  else if(symbol == SYM_AND) // Assignment 4
+    return 1;
+  else
+    return 0;
+}
+
+// uint64_t bit_not_shift(){
+//   if(symbol == SYM_XORI)
+//     return 1;
+//   return 0;
+// }
+
+
+
+uint64_t is_not_shift(){
+  if(symbol == SYM_XORI)
+    return 1;
+  else
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+// Assignment 3
+uint64_t compile_shift_expression(){
+
+  uint64_t ltype;
+  uint64_t operator_symbol;
+  uint64_t rtype;
+
+
+  //printf("%s: 123!\n", selfie_name);
+
+  // assert: n = allocated_temporaries
+
+  ltype = compile_simple_expression();
+
+  // assert: allocated_temporaries == n + 1
+
+  while (is_bit_shift()) {
+    operator_symbol = symbol;
+
+    get_symbol();
+
+    rtype = compile_simple_expression();
+
+    // assert: allocated_temporaries == n + 2
+
+    if (ltype != rtype)
+      type_warning(ltype, rtype);
+
+
+    if(operator_symbol == SYM_L_BIT_SHIFT){
+        emit_sll(previous_temporary(), previous_temporary(), current_temporary());
+    }  
+    else if(operator_symbol == SYM_R_BIT_SHIFT){
+        emit_srl(previous_temporary(), previous_temporary(), current_temporary());
+    }
+  
+    else if(operator_symbol == SYM_OR){
+
+        emit_or(previous_temporary(), previous_temporary(), current_temporary());
+    }
+
+    else if(operator_symbol == SYM_AND){
+
+        emit_and(previous_temporary(), previous_temporary(), current_temporary());
+    }
+   
+   
+    
+
+
+    tfree(1);
+  }
+
+  // assert: allocated_temporaries == n + 1
+
+  // type of term is grammar attribute
+  return ltype;
+}
+
+
+// ===========
+
+
+
+
 
 uint64_t compile_simple_expression() {
   uint64_t ltype;
@@ -6747,6 +6874,32 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_ADD, rs2, rs1, F3_ADD, rd, OP_OP));
 
   ic_add = ic_add + 1;
+}
+
+
+// Assignment 3
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F3_SLL, rd, OP_OP));
+  ic_sll = ic_sll + 1;
+}
+
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F3_SRL, rd, OP_OP));
+  ic_srl = ic_srl + 1;
+}
+// Assignment 4
+void emit_and(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_AND, rs2, rs1, F3_AND, rd, OP_OP));
+  ic_and = ic_and + 1;
+}
+void emit_or(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+
+  emit_instruction(encode_r_format(F7_OR, rs2, rs1, F3_OR, rd, OP_OP));
+  ic_or = ic_or + 1;
+}
+void emit_xori(uint64_t rd, uint64_t rs1, uint64_t immediate) {
+  emit_instruction(encode_i_format(immediate, rs1, F3_XORI, rd, OP_IMM));
+  ic_xori = ic_xori + 1;
 }
 
 void emit_sub(uint64_t rd, uint64_t rs1, uint64_t rs2) {
