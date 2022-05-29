@@ -41,7 +41,7 @@ letter = "a" | ... | "z" | "A" | ... | "Z" .
 C\* Grammar:
 
 ```
- cstar             = { type identifier
+ cstar             = { type identifier [ "[" integer_literal "]" ";" ] | 
                       [ "=" [ cast ] [ "-" ] ( integer_literal | character_literal ) ] ";" |
                     ( "void" | type ) identifier procedure } .
 
@@ -60,9 +60,13 @@ statement         = ( [ "*" ] identifier | "*" "(" expression ")" ) "=" expressi
 call              = identifier "(" [ expression { "," expression } ] ")" .
 
 expression        = simple_expression
+
+bit_not_expression = expression [ "~" ] 
+
                     [ ( "==" | "!=" | "<" | "<<" | ">>" | ">" | "<=" | ">=" | "&" | "|") simple_expression ] .
 
 bit_not_expression = expression [ "~" ] 
+
 
 simple_expression = term { ( "+" | "-" ) term } .
 
