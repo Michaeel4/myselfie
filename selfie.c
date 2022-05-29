@@ -671,7 +671,7 @@ uint64_t report_undefined_procedures();
 // +---+---------+
 
 uint64_t* allocate_symbol_table_entry() {
-  return smalloc(4 * SIZEOFUINT64STAR + 6 * SIZEOFUINT64);
+  return smalloc(4 * SIZEOFUINT64STAR + 7 * SIZEOFUINT64);
 }
 
 uint64_t* get_next_entry(uint64_t* entry)  { return (uint64_t*) *entry; }
