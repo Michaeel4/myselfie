@@ -89,6 +89,8 @@ is inspired by the conservative garbage collector of Hans Boehm.
 // ----------------------- BUILTIN PROCEDURES ----------------------
 // -----------------------------------------------------------------
 
+
+
 // selfie bootstraps int to uint64_t!
 void exit(int code);
 
@@ -269,6 +271,7 @@ uint64_t CHAR_DOT          = '.';
 // Assignment 5
 uint64_t CHAR_LBRACKET = '[';
 uint64_t CHAR_RBRACKET = ']';
+
 
 
 
@@ -667,8 +670,11 @@ uint64_t report_undefined_procedures();
 // | 8 | dim     | // Assignment 5
 // +---+---------+
 
+// Notes for Assignment 8:
+// we could try to create a 
+
 uint64_t* allocate_symbol_table_entry() {
-  return smalloc(2 * SIZEOFUINT64STAR + 6 * SIZEOFUINT64);
+  return smalloc(5 * SIZEOFUINT64STAR + 7 * SIZEOFUINT64);
 }
 
 uint64_t* get_next_entry(uint64_t* entry)  { return (uint64_t*) *entry; }
@@ -680,6 +686,9 @@ uint64_t  get_value(uint64_t* entry)       { return             *(entry + 5); }
 uint64_t  get_address(uint64_t* entry)     { return             *(entry + 6); }
 uint64_t  get_scope(uint64_t* entry)       { return             *(entry + 7); }
 char* get_struct(uint64_t* entry)       {return (char*)       *(entry + 8);}
+uint64_t* get_struct_pointer(uint64_t* entry) { return (uint64_t*) *(entry + 9); }
+
+
 void set_next_entry(uint64_t* entry, uint64_t* next) { *entry       = (uint64_t) next; }
 void set_string(uint64_t* entry, char* identifier)   { *(entry + 1) = (uint64_t) identifier; }
 void set_line_number(uint64_t* entry, uint64_t line) { *(entry + 2) = line; }
@@ -689,6 +698,7 @@ void set_value(uint64_t* entry, uint64_t value)      { *(entry + 5) = value; }
 void set_address(uint64_t* entry, uint64_t address)  { *(entry + 6) = address; }
 void set_scope(uint64_t* entry, uint64_t scope)      { *(entry + 7) = scope; }
 void set_struct(uint64_t* entry, char* identifier)            { *(entry + 8) = (uint64_t) identifier; }
+void set_struct_pointer(uint64_t* entry, uint64_t* pointer) { *(entry + 9) = (uint64_t) pointer; }
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -705,6 +715,7 @@ uint64_t UINT64_T     = 1;
 uint64_t UINT64STAR_T = 2;
 uint64_t VOID_T       = 3;
 uint64_t UNDECLARED_T = 4;
+//uint64_t STRUCT = 5; // Assignment 8
 
 // symbol tables
 uint64_t GLOBAL_TABLE  = 1;
@@ -799,6 +810,11 @@ uint64_t  compile_shift_expression();
 //void calculate_array_address(uint64_t* entry);
 // Assignment 7
 void compile_structs();
+
+// Assignment 8
+void compile_selector();
+uint64_t is_selector_pointer();
+
 
 // Assignment 5
 
@@ -3758,9 +3774,10 @@ void get_character() {
     character = *character_buffer;
 
     number_of_read_characters = number_of_read_characters + 1;
-  } else if (number_of_read_bytes == 0)
+  } else if (number_of_read_bytes == 0){
     // reached end of file
     character = CHAR_EOF;
+  }
   else {
     printf("%s: could not read character from input file %s\n", selfie_name, source_name);
 
@@ -4182,6 +4199,7 @@ void get_symbol() {
       } else if (character == CHAR_DASH) {
         get_character();
          if(character == CHAR_GT) {
+          //print("%s found SYM ARROW!");
           symbol = SYM_ARROW;
 
           get_character();
@@ -4644,6 +4662,8 @@ uint64_t look_for_type() {
     return 0;
   else if(symbol == SYM_STRUCT)
     return 0;
+  else if(symbol == SYM_ARROW)
+    return 0;
   else if (symbol == SYM_VOID)
     return 0;
   else if (symbol == SYM_EOF)
@@ -4813,13 +4833,20 @@ void load_small_and_medium_integer(uint64_t reg, uint64_t value) {
 uint64_t* get_variable_or_big_int(char* variable_or_big_int, uint64_t class) {
   uint64_t* entry;
 
+  
+
   if (class == BIGINT)
     return search_global_symbol_table(variable_or_big_int, class);
   else {
     entry = get_scoped_symbol_table_entry(variable_or_big_int, class);
-     if (entry == (uint64_t*) 0) { // Assignment 7, we must check here for the struct to avoid the error previously.
+
+    if (entry == (uint64_t*) 0) { // Assignment 7, we must check here for the struct to avoid the error previously.
       entry = get_scoped_symbol_table_entry(variable_or_big_int, STRUCT);
     }
+
+
+
+
 
     if (entry != (uint64_t*) 0)
       return entry;
@@ -4830,6 +4857,7 @@ uint64_t* get_variable_or_big_int(char* variable_or_big_int, uint64_t class) {
     }
   }
 }
+
 
 void load_upper_base_address(uint64_t* entry) {
   uint64_t lower;
@@ -4858,6 +4886,8 @@ uint64_t load_variable_or_big_int(char* variable_or_big_int, uint64_t class) {
   uint64_t offset;
 
   // assert: n = allocated_temporaries
+
+ 
 
   entry = get_variable_or_big_int(variable_or_big_int, class);
 
@@ -5129,7 +5159,8 @@ uint64_t compile_factor() {
   uint64_t dereference;
   uint64_t* entry;
 
-
+    
+ 
   char* variable_or_procedure_name;
 
   // assert: n = allocated_temporaries
@@ -5168,6 +5199,8 @@ uint64_t compile_factor() {
   } else
     has_cast = 0;
 
+   
+
   // optional: -
   if (symbol == SYM_MINUS) {
     negative = 1;
@@ -5189,18 +5222,23 @@ uint64_t compile_factor() {
     dereference = 0;
 
   // variable or call?
+ 
   if (symbol == SYM_IDENTIFIER) {
     variable_or_procedure_name = identifier;
 
     get_symbol();
     if (symbol == SYM_ARROW){
+
+      print("%s,called me!");
       entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
 
-      type = UINT64_T;
+      type = load_variable_or_big_int(variable_or_procedure_name, STRUCT);
 
       emit_load(current_temporary(), current_temporary(), 0);
 
     }
+
+    
 
     else if (symbol == SYM_LPARENTHESIS) {
       get_symbol();
@@ -5822,6 +5860,8 @@ void compile_statement() {
       get_symbol();
   }
 
+
+
   // ["*"]
   if (symbol == SYM_ASTERISK) {
     get_symbol();
@@ -5849,7 +5889,8 @@ void compile_statement() {
 
       return;
     }
-
+   
+   
     // "*" ( variable | "(" expression ")" ) "=" expression
     if (symbol == SYM_ASSIGN) {
       get_symbol();
@@ -5876,16 +5917,79 @@ void compile_statement() {
   else if (symbol == SYM_IDENTIFIER) {
     variable_or_procedure_name = identifier;
 
+    //here in this loop, we identify (i assume at least) the struct identifier inside the main function.
+    // so it would be a good idead to get here the struct, so that we can load the offset member of the struct.
+    // Assignment 8 personal notes.
+
+    
     get_symbol();
      if (symbol == SYM_ARROW) {
-      entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
 
-      ltype = UINT64STAR_T;
+       print("%s called");
+        get_symbol();
+      if(symbol == SYM_IDENTIFIER){
+            print(identifier);
 
-      is_struct = 1;
 
-    }
+            entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+           //entry = is_struct_variable(get_type(entry));
+            //entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
 
+
+          ltype = load_variable_or_big_int(identifier, STRUCT);
+          
+
+
+
+        //is_struct_variable(get_type(entry));
+
+
+
+        //load_upper_base_address(entry);
+
+        //ltype = UINT64STAR_T;
+
+
+
+        //entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+        //rtype = load_variable_or_big_int(identifier, VARIABLE);
+
+
+
+  
+  offset = get_address(entry);
+
+  printf("%lu\n", offset);
+
+  // if (is_signed_integer(offset, 12)) {
+  //   talloc();
+
+  //   //emit_load(current_temporary(), get_struct_pointer(ltype), offset);
+  // } else {
+  //   load_upper_base_address(entry);
+
+  //   emit_load(current_temporary(), current_temporary(), sign_extend(get_bits(offset, 0, 12), 12));
+  // }
+  //       //is_struct_variable(ltype);
+
+  //       get_symbol();
+       
+  //     }
+      //compile_selector();
+
+
+          //is_struct = 1;
+
+            //get_symbol();
+            
+      
+     
+      
+      }
+
+     }
+   
+    
     // procedure call
     if (symbol == SYM_LPARENTHESIS) {
       get_symbol();
@@ -5897,6 +6001,7 @@ void compile_statement() {
       emit_addi(REG_A0, REG_ZR, 0);
 
       get_expected_symbol(SYM_SEMICOLON);
+    
 
     // variable "=" expression
     } else if (symbol == SYM_ASSIGN) {
@@ -5959,8 +6064,11 @@ uint64_t compile_type() {
 
   type = UINT64_T;
 
+  
+
   if (symbol == SYM_UINT64) {
     get_symbol();
+   
 
     while (symbol == SYM_UINT64)
       // we tolerate multiple uint64_t aliases for bootstrapping
@@ -5999,10 +6107,12 @@ uint64_t* compile_variable(uint64_t offset) {
   entry = (uint64_t*) 0;
 
 
+
+  
   type = compile_type();
   if (symbol == SYM_STRUCT) { // Assignment 7
     get_symbol();
-
+   
     if (symbol == SYM_IDENTIFIER) {
       get_symbol();
 
@@ -6041,7 +6151,10 @@ uint64_t* compile_variable(uint64_t offset) {
     }
 
   }
+  
   if (symbol == SYM_IDENTIFIER) {
+   
+  
     // TODO: check if identifier has already been declared
     entry = create_symbol_table_entry(LOCAL_TABLE, identifier, line_number, VARIABLE, type, 0, offset);
 
@@ -6055,16 +6168,18 @@ uint64_t* compile_variable(uint64_t offset) {
   return entry;
 
 }
-uint64_t* is_struct_variable(uint64_t offset) { // Assignment 7 to identify structs
+uint64_t* is_struct_variable(uint64_t offset) { // Assignment 8 to identify structs
   uint64_t type;
   uint64_t* declare_valid_field;
   char* str_type;
   char* variable_or_procedure_name;
   declare_valid_field = smalloc(2 * UINT64_T + 2 * UINT64STAR_T);
-
+  
   if (symbol == SYM_STRUCT) {
     get_symbol();
+    print("%s yes it is a struct!!");
     if (symbol == SYM_IDENTIFIER) {
+    
       get_symbol();
       str_type = identifier;
       if (symbol == SYM_ASTERISK) {
@@ -6075,7 +6190,7 @@ uint64_t* is_struct_variable(uint64_t offset) { // Assignment 7 to identify stru
           if (symbol == SYM_SEMICOLON) {
 
             // since we confirmed at this point that we have a struct variable, we can safely assume that the struct type is correct
-            // and set the arimethic types to the predfined struct types // Assignment 7
+            // and set the arimethic types to the predfined struct types // Assignment 8
             *(declare_valid_field + 1) = (uint64_t) variable_or_procedure_name;
             *(declare_valid_field + 2) = (uint64_t) str_type;
             *(declare_valid_field + 3) = offset;
@@ -6132,6 +6247,32 @@ uint64_t* is_struct_variable(uint64_t offset) { // Assignment 7 to identify stru
   return declare_valid_field;
 }
 
+uint64_t is_selector_pointer(){
+  if(symbol == SYM_ARROW)
+    return 1;
+  else
+    return 0;
+}
+
+void compile_selector(){
+   if(symbol == SYM_INTEGER){
+
+      get_symbol();
+    }
+  if (symbol == SYM_IDENTIFIER) {
+    get_symbol();
+
+    if(symbol == SYM_INTEGER){
+
+      get_symbol();
+    }
+  } else {
+    syntax_error_symbol(SYM_IDENTIFIER);
+
+    exit(EXITCODE_PARSERERROR);
+  }
+}
+
 void compile_structs() {
   uint64_t offset;
   uint64_t* validate_field;
@@ -6145,18 +6286,26 @@ void compile_structs() {
   entry = (uint64_t*) 0;
 
   get_symbol();
-
+  
+  
+    
   if (symbol == SYM_IDENTIFIER) {
     variable_or_procedure_name = identifier;
 
+
     get_symbol();
 
+   
+    
     if (symbol == SYM_ASTERISK) {
+
+      //pointer to struct
       get_symbol();
 
       if (symbol == SYM_IDENTIFIER) {
         entry = search_global_symbol_table(identifier, STRUCT);
 
+        // if there is no such entry in the global symbol table, we create one
         if (entry == (uint64_t*) 0) {
           data_size = data_size + SIZEOFUINT64STAR;
 
@@ -6209,6 +6358,7 @@ void compile_structs() {
         validate_field = is_struct_variable(offset);
         if (offset == 0){
           //print("offset set to 0");
+          set_struct_pointer(entry, validate_field);
         } else {
           *(previous_field + 0) = (uint64_t) validate_field;
         }
@@ -6243,9 +6393,12 @@ uint64_t compile_initialization(uint64_t type) {
 
   has_cast = 0;
 
+
+
   if (symbol == SYM_ASSIGN) {
     get_symbol();
 
+ 
     // optional: [ cast ]
     if (symbol == SYM_LPARENTHESIS) {
       has_cast = 1;
@@ -6302,6 +6455,8 @@ void compile_procedure(char* procedure, uint64_t type) {
   number_of_parameters = 0;
 
   // try parsing formal parameters
+  
+ 
 
   if (symbol == SYM_LPARENTHESIS) {
     get_symbol();
@@ -6405,8 +6560,13 @@ void compile_procedure(char* procedure, uint64_t type) {
     // try parsing local variable declarations
 
     number_of_local_variable_bytes = 0;
+ 
+
+   
 
     while (is_struct_or_uint64_t()) {
+      print("%s yes!");
+
       number_of_local_variable_bytes = number_of_local_variable_bytes + WORDSIZE;
 
       // offset of local variables relative to frame pointer is negative
@@ -6464,7 +6624,7 @@ void compile_cstar() {
   uint64_t current_line_number;
   uint64_t initial_value;
   uint64_t* entry;
-
+   
   while (symbol != SYM_EOF) {
     while (look_for_type()) {
       syntax_error_unexpected();
@@ -6478,6 +6638,7 @@ void compile_cstar() {
     if (symbol == SYM_VOID) {
       // void identifier ...
       // procedure declaration or definition
+
       get_symbol();
 
       if (symbol == SYM_ASTERISK) {
@@ -6497,22 +6658,26 @@ void compile_cstar() {
       } else
         syntax_error_symbol(SYM_IDENTIFIER);
     } else if (symbol == SYM_STRUCT){
+
       compile_structs();
       } else {
       type = compile_type();
-
+      
       if (symbol == SYM_IDENTIFIER) {
         variable_or_procedure_name = identifier;
 
         get_symbol();
+       
+      
 
         if (symbol == SYM_LPARENTHESIS)
           // type identifier "(" ...
           // procedure declaration or definition
           compile_procedure(variable_or_procedure_name, type);
         else {
+         
           current_line_number = line_number;
-
+         
           if (symbol == SYM_SEMICOLON) {
             // type identifier ";" ...
             // global variable declaration
@@ -6520,6 +6685,7 @@ void compile_cstar() {
 
             // uninitialized global variables are initialized to 0
             initial_value = 0;
+          
           } else
             // type identifier "=" ...
             // global variable definition
