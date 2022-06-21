@@ -486,6 +486,10 @@ uint64_t SYM_GT           = 26; // >
 uint64_t SYM_GEQ          = 27; // >=
 uint64_t SYM_ELLIPSIS     = 28; // ...
 
+
+// Assignment 9
+uint64_t SYM_FOR = 29; // for
+
 // === Assignments 2 ===
 // symbols for bit shifting << and >>
 
@@ -596,12 +600,15 @@ void init_scanner () {
   *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
 
   // Assignment 5
-    *(SYMBOLS + SYM_LBRACKET) = (uint64_t) "[";
-    *(SYMBOLS + SYM_RBRACKET) = (uint64_t) "]";
+  *(SYMBOLS + SYM_LBRACKET) = (uint64_t) "[";
+  *(SYMBOLS + SYM_RBRACKET) = (uint64_t) "]";
 
     // Assignment 7
-    *(SYMBOLS + SYM_ARROW) = (uint64_t) "->";
-    *(SYMBOLS + SYM_STRUCT) = (uint64_t) "struct";
+  *(SYMBOLS + SYM_ARROW) = (uint64_t) "->";
+  *(SYMBOLS + SYM_STRUCT) = (uint64_t) "struct";
+
+  // Assignment 9
+  *(SYMBOLS + SYM_FOR) = (uint64_t) "for";
 
 
 
@@ -848,6 +855,10 @@ uint64_t is_not_shift();
 // Assignment 4
 
 //uint64_t bit_not_shift();
+
+// Assignment 9
+void compile_for();
+void compile_last_statement();
 
 
 
@@ -3946,6 +3957,8 @@ uint64_t identifier_or_keyword() {
     return SYM_RETURN;
   else if (identifier_string_match(SYM_WHILE))
     return SYM_WHILE;
+  else if(identifier_string_match(SYM_FOR))
+    return SYM_FOR;
   else if (identifier_string_match(SYM_STRUCT))
     return SYM_STRUCT;
   else if (identifier_string_match(SYM_INT))
@@ -4646,6 +4659,8 @@ uint64_t look_for_statement() {
   else if (symbol == SYM_IDENTIFIER)
     return 0;
   else if (symbol == SYM_WHILE)
+    return 0;
+  else if(symbol == SYM_FOR)
     return 0;
   else if (symbol == SYM_IF)
     return 0;
@@ -5664,6 +5679,111 @@ uint64_t compile_expression() {
   return ltype;
 }
 
+
+void compile_last_statement(){
+
+
+
+
+}
+// Assignment 9
+
+void compile_for(){
+
+  uint64_t jump_back_to_for;
+  uint64_t branch_forward_to_end;
+
+  // assert: allocated_temporaries == 0
+
+  jump_back_to_for = code_size;
+
+
+  branch_forward_to_end = 0;
+
+  // for ( expression )
+  if (symbol == SYM_FOR) {
+    get_symbol();
+
+    if (symbol == SYM_LPARENTHESIS) {
+      get_symbol();
+
+      compile_expression();
+
+
+      
+
+
+      if(symbol == SYM_ASSIGN){
+
+        get_symbol();
+
+        // Asssignment 8
+        //compile_last_statement();
+        compile_expression();
+
+        if(symbol == SYM_SEMICOLON){
+
+        get_symbol();
+
+        compile_expression();
+          if(symbol == SYM_SEMICOLON){
+
+        get_symbol();
+        compile_statement();
+
+
+       
+      }
+      }
+      }
+    
+
+      // we do not know where to branch, fixup later
+      branch_forward_to_end = code_size;
+
+      emit_beq(current_temporary(), REG_ZR, 0);
+
+      tfree(1);
+
+      if (symbol == SYM_RPARENTHESIS) {
+        get_symbol(); 
+
+        // zero or more statements: { statement }
+        if (symbol == SYM_LBRACE) {
+          get_symbol();
+
+          while (is_not_rbrace_or_eof())
+            compile_statement();
+
+          get_required_symbol(SYM_RBRACE);
+        } else
+          // only one statement without {}
+          compile_statement();
+      } else
+        syntax_error_symbol(SYM_RPARENTHESIS);
+    } else
+      syntax_error_symbol(SYM_LPARENTHESIS);
+  } else
+    syntax_error_symbol(SYM_WHILE);
+
+  // we use JAL for the unconditional jump back to the loop condition because:
+  // 1. the RISC-V doc recommends to do so to not disturb branch prediction
+  // 2. GCC also uses JAL for the unconditional back jump of a while loop
+  emit_jal(REG_ZR, jump_back_to_for - code_size);
+
+  if (branch_forward_to_end != 0)
+    // first instruction after loop body will be generated here
+    // now we have the address for the conditional branch from above
+    fixup_relative_BFormat(branch_forward_to_end);
+
+  // assert: allocated_temporaries == 0
+
+  number_of_while = number_of_while + 1;
+}
+
+
+
+
 void compile_while() {
   uint64_t jump_back_to_while;
   uint64_t branch_forward_to_end;
@@ -6044,6 +6164,11 @@ void compile_statement() {
   // while statement?
   else if (symbol == SYM_WHILE) {
     compile_while();
+  }
+
+  // Assignment 9
+  else if(symbol == SYM_FOR){
+    compile_for();
   }
   // if statement?
   else if (symbol == SYM_IF) {
