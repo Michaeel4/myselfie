@@ -486,6 +486,8 @@ uint64_t SYM_GT           = 26; // >
 uint64_t SYM_GEQ          = 27; // >=
 uint64_t SYM_ELLIPSIS     = 28; // ...
 
+
+
 // === Assignments 2 ===
 // symbols for bit shifting << and >>
 
@@ -511,11 +513,13 @@ uint64_t SYM_UNSIGNED = 38; // unsigned
 uint64_t SYM_ARROW = 39; // ->
 uint64_t SYM_STRUCT = 40; // struct
 
+// Assignment 9
+uint64_t SYM_FOR = 41; // for
 
 
 
 
-uint64_t SYM_CONST    = 41; // const
+uint64_t SYM_CONST    = 42; // const
 
 
 // =====================
@@ -596,12 +600,15 @@ void init_scanner () {
   *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
 
   // Assignment 5
-    *(SYMBOLS + SYM_LBRACKET) = (uint64_t) "[";
-    *(SYMBOLS + SYM_RBRACKET) = (uint64_t) "]";
+  *(SYMBOLS + SYM_LBRACKET) = (uint64_t) "[";
+  *(SYMBOLS + SYM_RBRACKET) = (uint64_t) "]";
 
     // Assignment 7
-    *(SYMBOLS + SYM_ARROW) = (uint64_t) "->";
-    *(SYMBOLS + SYM_STRUCT) = (uint64_t) "struct";
+  *(SYMBOLS + SYM_ARROW) = (uint64_t) "->";
+  *(SYMBOLS + SYM_STRUCT) = (uint64_t) "struct";
+
+  // Assignment 9
+  *(SYMBOLS + SYM_FOR) = (uint64_t) "for";
 
 
 
@@ -849,6 +856,10 @@ uint64_t is_not_shift();
 
 //uint64_t bit_not_shift();
 
+// Assignment 9
+void compile_for();
+void compile_last_statement();
+
 
 
 
@@ -867,6 +878,7 @@ uint64_t number_of_assignments = 0;
 uint64_t number_of_while       = 0;
 uint64_t number_of_if          = 0;
 uint64_t number_of_return      = 0;
+uint64_t number_of_for = 0; // Assignment 9
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -876,6 +888,7 @@ void reset_parser() {
   number_of_while       = 0;
   number_of_if          = 0;
   number_of_return      = 0;
+  number_of_for = 0; // Assignment 9
 
   number_of_syntax_errors = 0;
 
@@ -3946,6 +3959,8 @@ uint64_t identifier_or_keyword() {
     return SYM_RETURN;
   else if (identifier_string_match(SYM_WHILE))
     return SYM_WHILE;
+  else if(identifier_string_match(SYM_FOR))
+    return SYM_FOR;
   else if (identifier_string_match(SYM_STRUCT))
     return SYM_STRUCT;
   else if (identifier_string_match(SYM_INT))
@@ -4646,6 +4661,8 @@ uint64_t look_for_statement() {
   else if (symbol == SYM_IDENTIFIER)
     return 0;
   else if (symbol == SYM_WHILE)
+    return 0;
+  else if(symbol == SYM_FOR)
     return 0;
   else if (symbol == SYM_IF)
     return 0;
@@ -5664,6 +5681,340 @@ uint64_t compile_expression() {
   return ltype;
 }
 
+
+void compile_last_statement(){
+
+  uint64_t ltype;
+  uint64_t rtype;
+  char* variable_or_procedure_name;
+  uint64_t* entry;
+  uint64_t offset;
+  uint64_t is_struct; // Assignment 7
+  // Init value for compiler
+  is_struct = 0;
+
+
+  // assert: allocated_temporaries == 0
+
+  while (look_for_statement()) {
+    syntax_error_unexpected();
+
+    if (symbol == SYM_EOF)
+      exit(EXITCODE_PARSERERROR);
+    else
+      get_symbol();
+  }
+
+
+
+  // ["*"]
+  if (symbol == SYM_ASTERISK) {
+    get_symbol();
+
+    // "*" variable
+    if (symbol == SYM_IDENTIFIER) {
+      ltype = load_variable_or_big_int(identifier, VARIABLE);
+
+      if (ltype != UINT64STAR_T)
+        type_warning(UINT64STAR_T, ltype);
+
+      get_symbol();
+    // "*" "(" expression ")"
+    } else if (symbol == SYM_LPARENTHESIS) {
+      get_symbol();
+
+      ltype = compile_expression();
+
+      if (ltype != UINT64STAR_T)
+        type_warning(UINT64STAR_T, ltype);
+
+      get_expected_symbol(SYM_RPARENTHESIS);
+    } else {
+      syntax_error_symbol(SYM_LPARENTHESIS);
+
+      return;
+    }
+   
+   
+    // "*" ( variable | "(" expression ")" ) "=" expression
+    if (symbol == SYM_ASSIGN) {
+      get_symbol();
+
+      rtype = compile_expression();
+
+      if (rtype != UINT64_T)
+        type_warning(UINT64_T, rtype);
+
+      emit_store(previous_temporary(), 0, current_temporary());
+
+      tfree(2);
+
+      number_of_assignments = number_of_assignments + 1;
+    } else {
+      syntax_error_symbol(SYM_ASSIGN);
+
+      tfree(1);
+    }
+
+      get_expected_symbol(SYM_SEMICOLON);
+  }
+  // variable "=" expression | call
+  else if (symbol == SYM_IDENTIFIER) {
+    variable_or_procedure_name = identifier;
+
+    //here in this loop, we identify (i assume at least) the struct identifier inside the main function.
+    // so it would be a good idead to get here the struct, so that we can load the offset member of the struct.
+    // Assignment 8 personal notes.
+
+    
+    get_symbol();
+     if (symbol == SYM_ARROW) {
+
+       print("%s called");
+        get_symbol();
+      if(symbol == SYM_IDENTIFIER){
+            print(identifier);
+
+
+            entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+           //entry = is_struct_variable(get_type(entry));
+            //entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+
+
+          ltype = load_variable_or_big_int(identifier, STRUCT);
+          
+
+
+
+        //is_struct_variable(get_type(entry));
+
+
+
+        //load_upper_base_address(entry);
+
+        //ltype = UINT64STAR_T;
+
+
+
+        //entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+        //rtype = load_variable_or_big_int(identifier, VARIABLE);
+
+
+
+  
+  offset = get_address(entry);
+
+  printf("%lu\n", offset);
+
+  // if (is_signed_integer(offset, 12)) {
+  //   talloc();
+
+  //   //emit_load(current_temporary(), get_struct_pointer(ltype), offset);
+  // } else {
+  //   load_upper_base_address(entry);
+
+  //   emit_load(current_temporary(), current_temporary(), sign_extend(get_bits(offset, 0, 12), 12));
+  // }
+  //       //is_struct_variable(ltype);
+
+  //       get_symbol();
+       
+  //     }
+      //compile_selector();
+
+
+          //is_struct = 1;
+
+            //get_symbol();
+            
+      
+     
+      
+      }
+
+     }
+   
+    
+    // procedure call
+    if (symbol == SYM_LPARENTHESIS) {
+      get_symbol();
+
+      compile_call(variable_or_procedure_name);
+
+      // reset return register to initial return value
+      // for missing return expressions
+      emit_addi(REG_A0, REG_ZR, 0);
+
+      get_expected_symbol(SYM_SEMICOLON);
+    
+
+    // variable "=" expression
+    } else if (symbol == SYM_ASSIGN) {
+      entry = get_variable_or_big_int(variable_or_procedure_name, VARIABLE);
+
+      ltype = get_type(entry);
+
+      get_symbol();
+
+      rtype = compile_expression();
+
+      if (ltype != rtype)
+        type_warning(ltype, rtype);
+
+      offset = get_address(entry);
+      if (is_struct) {
+        emit_store(previous_temporary(), 0, current_temporary());
+
+        tfree(2);
+      }
+      else if (is_signed_integer(offset, 12)) {
+        emit_store(get_scope(entry), offset, current_temporary());
+
+        tfree(1);
+      } else {
+        load_upper_base_address(entry);
+
+        emit_store(current_temporary(), sign_extend(get_bits(offset, 0, 12), 12), previous_temporary());
+
+        tfree(2);
+      }
+
+      is_struct = 0;
+      number_of_assignments = number_of_assignments + 1;
+
+      get_expected_symbol(SYM_RPARENTHESIS);
+    } else
+      syntax_error_unexpected();
+  }
+  // while statement?
+  else if (symbol == SYM_WHILE) {
+    compile_while();
+  }
+
+  // Assignment 9
+  else if(symbol == SYM_FOR){
+    compile_for();
+  }
+  // if statement?
+  else if (symbol == SYM_IF) {
+    compile_if();
+  }
+  // return statement?
+  else if (symbol == SYM_RETURN) {
+    compile_return();
+
+    get_expected_symbol(SYM_SEMICOLON);
+  }
+
+  // assert: allocated_temporaries == 0
+}
+
+
+
+// // Assignment 9
+void compile_for(){
+
+  uint64_t jump_back_to_for;
+  uint64_t branch_forward_to_end;
+  uint64_t jump_back_to_for_counter;
+  uint64_t branch_to_counter; 
+  
+  
+  // assert: allocated_temporaries == 0
+  jump_back_to_for_counter = 0;
+  branch_forward_to_end = 0;
+  branch_to_counter = 0;
+    jump_back_to_for = 0;
+
+  // while ( expression )
+  if (symbol == SYM_FOR) {
+    get_symbol();
+
+    // for (
+    if (symbol == SYM_LPARENTHESIS) {
+                jump_back_to_for = code_size;
+
+      get_symbol();
+      compile_statement();
+
+     
+
+      // for(i = 0; i 
+      if(symbol == SYM_IDENTIFIER){
+     
+          get_symbol();
+          
+          // i < 3
+          if(symbol == SYM_LT){
+              get_symbol();
+              compile_expression();
+             
+              
+              // we do not know where to branch, fixup later
+    
+              // for i < 3
+
+             
+              if(symbol == SYM_SEMICOLON){
+                 branch_forward_to_end = code_size;
+              
+              emit_beq(current_temporary(), REG_ZR, 0);
+              tfree(1);
+                get_symbol();
+             
+
+                     // we do not know where to branch, fixup later
+
+                if(symbol == SYM_IDENTIFIER){
+
+                   jump_back_to_for_counter = code_size;
+                  compile_last_statement();
+                 
+
+                  if(symbol == SYM_LBRACE){
+                    
+                    get_symbol();
+
+                    while(is_not_rbrace_or_eof()){
+                      compile_statement();
+                        //emit_jal(REG_ZR, jump_back_to_for - code_size);
+
+                    }
+                    get_required_symbol(SYM_RBRACE);
+                  }
+                } 
+              }
+          }  
+      }  
+
+    }  
+
+  }
+
+
+   // we use JAL for the unconditional jump back to the loop condition because:
+  // 1. the RISC-V doc recommends to do so to not disturb branch prediction
+  // 2. GCC also uses JAL for the unconditional back jump of a while loop
+  if (branch_forward_to_end != 0)
+    // first instruction after loop body will be generated here
+    // now we have the address for the conditional branch from above
+    fixup_relative_BFormat(branch_forward_to_end);
+
+  
+  // assert: allocated_temporaries == 0
+  number_of_for = number_of_for + 1;
+  
+  }
+    
+
+
+
+  
+
+
+
+
+
 void compile_while() {
   uint64_t jump_back_to_while;
   uint64_t branch_forward_to_end;
@@ -5742,7 +6093,8 @@ void compile_if() {
       compile_expression();
 
       // if the "if" case is not true we branch to "else" (if provided)
-      branch_forward_to_else_or_end = code_size;
+      branch_forward_to_else_or_end = code_size; // Assignemnt 9 Notes: This is used as some kind of "anchor"
+      // 
 
       emit_beq(current_temporary(), REG_ZR, 0);
 
@@ -5758,7 +6110,7 @@ void compile_if() {
           while (is_not_rbrace_or_eof())
             compile_statement();
 
-          get_required_symbol(SYM_RBRACE);
+            get_required_symbol(SYM_RBRACE);
         } else
         // only one statement without {}
           compile_statement();
@@ -5771,14 +6123,14 @@ void compile_if() {
           // by unconditionally jumping to the end
           jump_forward_to_end = code_size;
 
-          emit_jal(REG_ZR, 0);
+          emit_jal(REG_ZR, jump_forward_to_end );
 
           // if the "if" case was not true we branch here
           fixup_relative_BFormat(branch_forward_to_else_or_end);
 
           // zero or more statements: { statement }
           if (symbol == SYM_LBRACE) {
-            get_symbol();
+            get_symbol(); 
 
             while (is_not_rbrace_or_eof())
               compile_statement();
@@ -6044,6 +6396,11 @@ void compile_statement() {
   // while statement?
   else if (symbol == SYM_WHILE) {
     compile_while();
+  }
+
+  // Assignment 9
+  else if(symbol == SYM_FOR){
+    compile_for();
   }
   // if statement?
   else if (symbol == SYM_IF) {
