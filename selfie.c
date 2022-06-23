@@ -878,6 +878,7 @@ uint64_t number_of_assignments = 0;
 uint64_t number_of_while       = 0;
 uint64_t number_of_if          = 0;
 uint64_t number_of_return      = 0;
+uint64_t number_of_for = 0; // Assignment 9
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -887,6 +888,7 @@ void reset_parser() {
   number_of_while       = 0;
   number_of_if          = 0;
   number_of_return      = 0;
+  number_of_for = 0; // Assignment 9
 
   number_of_syntax_errors = 0;
 
@@ -5909,17 +5911,20 @@ void compile_last_statement(){
 
 
 
-// Assignment 9
+// // Assignment 9
 void compile_for(){
 
   uint64_t jump_back_to_for;
   uint64_t branch_forward_to_end;
-  uint64_t jump_back_to_counter;
-
+  uint64_t jump_back_to_for_counter;
+  uint64_t branch_to_counter; 
+  
+  
   // assert: allocated_temporaries == 0
-  jump_back_to_counter = 0;
-  jump_back_to_for = code_size;
+  jump_back_to_for_counter = 0;
   branch_forward_to_end = 0;
+  branch_to_counter = 0;
+    jump_back_to_for = 0;
 
   // while ( expression )
   if (symbol == SYM_FOR) {
@@ -5927,65 +5932,83 @@ void compile_for(){
 
     // for (
     if (symbol == SYM_LPARENTHESIS) {
-      get_symbol();
+                jump_back_to_for = code_size;
 
+      get_symbol();
       compile_statement();
 
-        
+     
 
       // for(i = 0; i 
       if(symbol == SYM_IDENTIFIER){
+     
           get_symbol();
+          
           // i < 3
           if(symbol == SYM_LT){
               get_symbol();
-
               compile_expression();
-
+             
+              
+              // we do not know where to branch, fixup later
+    
               // for i < 3
-              if(symbol == SYM_SEMICOLON){
 
+             
+              if(symbol == SYM_SEMICOLON){
+                 branch_forward_to_end = code_size;
+              
+              emit_beq(current_temporary(), REG_ZR, 0);
+              tfree(1);
                 get_symbol();
+             
+
+                     // we do not know where to branch, fixup later
 
                 if(symbol == SYM_IDENTIFIER){
-                  
-                  compile_last_statement();
 
+                   jump_back_to_for_counter = code_size;
+                  compile_last_statement();
+                 
 
                   if(symbol == SYM_LBRACE){
-
+                    
                     get_symbol();
 
                     while(is_not_rbrace_or_eof()){
-
                       compile_statement();
+                        //emit_jal(REG_ZR, jump_back_to_for - code_size);
+
                     }
                     get_required_symbol(SYM_RBRACE);
                   }
-
-                
                 } 
-
-               
-
               }
+          }  
+      }  
 
-          }
-         
+    }  
 
-      }
-        // we do not know where to branch, fixup later
-          branch_forward_to_end = code_size;
-          emit_beq(current_temporary(), REG_ZR, 0);
-          tfree(1);
-    }
+  }
+
+
+   // we use JAL for the unconditional jump back to the loop condition because:
+  // 1. the RISC-V doc recommends to do so to not disturb branch prediction
+  // 2. GCC also uses JAL for the unconditional back jump of a while loop
+  if (branch_forward_to_end != 0)
+    // first instruction after loop body will be generated here
+    // now we have the address for the conditional branch from above
+    fixup_relative_BFormat(branch_forward_to_end);
+
   
-  }}
+  // assert: allocated_temporaries == 0
+  number_of_for = number_of_for + 1;
+  
+  }
     
 
 
-      
-     
+
   
 
 
@@ -6070,7 +6093,8 @@ void compile_if() {
       compile_expression();
 
       // if the "if" case is not true we branch to "else" (if provided)
-      branch_forward_to_else_or_end = code_size;
+      branch_forward_to_else_or_end = code_size; // Assignemnt 9 Notes: This is used as some kind of "anchor"
+      // 
 
       emit_beq(current_temporary(), REG_ZR, 0);
 
@@ -6086,7 +6110,7 @@ void compile_if() {
           while (is_not_rbrace_or_eof())
             compile_statement();
 
-          get_required_symbol(SYM_RBRACE);
+            get_required_symbol(SYM_RBRACE);
         } else
         // only one statement without {}
           compile_statement();
@@ -6099,14 +6123,14 @@ void compile_if() {
           // by unconditionally jumping to the end
           jump_forward_to_end = code_size;
 
-          emit_jal(REG_ZR, 0);
+          emit_jal(REG_ZR, jump_forward_to_end );
 
           // if the "if" case was not true we branch here
           fixup_relative_BFormat(branch_forward_to_else_or_end);
 
           // zero or more statements: { statement }
           if (symbol == SYM_LBRACE) {
-            get_symbol();
+            get_symbol(); 
 
             while (is_not_rbrace_or_eof())
               compile_statement();
