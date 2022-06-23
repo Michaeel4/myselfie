@@ -89,6 +89,8 @@ is inspired by the conservative garbage collector of Hans Boehm.
 // ----------------------- BUILTIN PROCEDURES ----------------------
 // -----------------------------------------------------------------
 
+
+
 // selfie bootstraps int to uint64_t!
 void exit(int code);
 
@@ -259,8 +261,32 @@ uint64_t CHAR_EQUAL        = '=';
 uint64_t CHAR_EXCLAMATION  = '!';
 uint64_t CHAR_LT           = '<';
 uint64_t CHAR_GT           = '>';
+
+uint64_t CHAR_AND          = '&';
+uint64_t CHAR_OR           = '|';
+uint64_t CHAR_XORI         = '~';
 uint64_t CHAR_BACKSLASH    =  92; // ASCII code 92 = backslash
 uint64_t CHAR_DOT          = '.';
+
+// Assignment 5
+uint64_t CHAR_LBRACKET = '[';
+uint64_t CHAR_RBRACKET = ']';
+
+
+
+
+// Assignment 4
+
+
+// Assignment 5 Notes for myself: 
+// as stated in the slides, in the decleration of an array there is:
+// - no code generation
+// - only symbol table entry
+// - calculate size of array
+// Decleration is a compile time concept. 
+// so one has to create the table entry and allocate memory for the declared array.
+// NO runtime logic needed for this. 
+
 
 uint64_t* character_buffer; // buffer for reading and writing characters
 
@@ -415,6 +441,8 @@ uint64_t is_character_not_double_quote_or_new_line_or_eof();
 
 uint64_t identifier_string_match(uint64_t string_index);
 uint64_t identifier_or_keyword();
+uint64_t* is_struct_variable(uint64_t offset);
+
 
 void get_symbol();
 uint64_t get_expected_symbol(uint64_t expected_symbol);
@@ -458,12 +486,43 @@ uint64_t SYM_GT           = 26; // >
 uint64_t SYM_GEQ          = 27; // >=
 uint64_t SYM_ELLIPSIS     = 28; // ...
 
+
+
+// === Assignments 2 ===
+// symbols for bit shifting << and >>
+
+uint64_t SYM_L_BIT_SHIFT = 29; // <<
+uint64_t SYM_R_BIT_SHIFT = 30; // >> 
+
+
+// Assignment 4
+uint64_t SYM_AND = 31; // &
+uint64_t SYM_OR = 32; // |
+uint64_t SYM_XORI = 33; // tidal
+
+// Assignment 5
+
+uint64_t SYM_LBRACKET = 34;
+uint64_t SYM_RBRACKET = 35;
+
 // symbols for bootstrapping
 
-uint64_t SYM_INT      = 29; // int
-uint64_t SYM_CHAR     = 30; // char
-uint64_t SYM_UNSIGNED = 31; // unsigned
-uint64_t SYM_CONST    = 32; // const
+uint64_t SYM_INT      = 36; // int
+uint64_t SYM_CHAR     = 37; // char
+uint64_t SYM_UNSIGNED = 38; // unsigned
+uint64_t SYM_ARROW = 39; // ->
+uint64_t SYM_STRUCT = 40; // struct
+
+// Assignment 9
+uint64_t SYM_FOR = 41; // for
+
+
+
+
+uint64_t SYM_CONST    = 42; // const
+
+
+// =====================
 
 uint64_t* SYMBOLS; // strings representing symbols
 
@@ -532,11 +591,40 @@ void init_scanner () {
   *(SYMBOLS + SYM_GT)           = (uint64_t) ">";
   *(SYMBOLS + SYM_GEQ)          = (uint64_t) ">=";
   *(SYMBOLS + SYM_ELLIPSIS)     = (uint64_t) "...";
+      // ==== Assignment 4 ====
+  *(SYMBOLS + SYM_AND) = (uint64_t) "&";
+  *(SYMBOLS + SYM_OR) = (uint64_t) "|";
+  *(SYMBOLS + SYM_XORI) = (uint64_t) "~";
+  // ==== Assignment 2 ==== 
+  *(SYMBOLS + SYM_L_BIT_SHIFT) = (uint64_t) "<<";
+  *(SYMBOLS + SYM_R_BIT_SHIFT) = (uint64_t) ">>";
+
+  // Assignment 5
+  *(SYMBOLS + SYM_LBRACKET) = (uint64_t) "[";
+  *(SYMBOLS + SYM_RBRACKET) = (uint64_t) "]";
+
+    // Assignment 7
+  *(SYMBOLS + SYM_ARROW) = (uint64_t) "->";
+  *(SYMBOLS + SYM_STRUCT) = (uint64_t) "struct";
+
+  // Assignment 9
+  *(SYMBOLS + SYM_FOR) = (uint64_t) "for";
+
+
+
+ 
+
 
   *(SYMBOLS + SYM_INT)      = (uint64_t) "int";
   *(SYMBOLS + SYM_CHAR)     = (uint64_t) "char";
   *(SYMBOLS + SYM_UNSIGNED) = (uint64_t) "unsigned";
   *(SYMBOLS + SYM_CONST)    = (uint64_t) "const";
+    // ==== Assignment 3 ====
+
+
+
+
+
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -574,20 +662,26 @@ uint64_t is_undefined_procedure(uint64_t* entry);
 uint64_t is_library_procedure(char* name);
 uint64_t report_undefined_procedures();
 
+// Assignment 5 
+// as stated, we need somehow a new table entry. 
 // symbol table entry:
 // +---+---------+
 // | 0 | next    | pointer to next entry
 // | 1 | string  | identifier string, big integer as string, string literal
 // | 2 | line#   | source line number
 // | 3 | class   | VARIABLE, BIGINT, STRING, PROCEDURE
-// | 4 | type    | UINT64_T, UINT64STAR_T, VOID_T
+// | 4 | type    | UINT64_T, UINT64STAR_T, VOID_T, ARRAY
 // | 5 | value   | VARIABLE: initial value
 // | 6 | address | VARIABLE, BIGINT, STRING: offset, PROCEDURE: address
 // | 7 | scope   | REG_GP (global), REG_S0 (local)
+// | 8 | dim     | // Assignment 5
 // +---+---------+
 
+// Notes for Assignment 8:
+// we could try to create a 
+
 uint64_t* allocate_symbol_table_entry() {
-  return smalloc(2 * SIZEOFUINT64STAR + 6 * SIZEOFUINT64);
+  return smalloc(5 * SIZEOFUINT64STAR + 7 * SIZEOFUINT64);
 }
 
 uint64_t* get_next_entry(uint64_t* entry)  { return (uint64_t*) *entry; }
@@ -598,6 +692,9 @@ uint64_t  get_type(uint64_t* entry)        { return             *(entry + 4); }
 uint64_t  get_value(uint64_t* entry)       { return             *(entry + 5); }
 uint64_t  get_address(uint64_t* entry)     { return             *(entry + 6); }
 uint64_t  get_scope(uint64_t* entry)       { return             *(entry + 7); }
+char* get_struct(uint64_t* entry)       {return (char*)       *(entry + 8);}
+uint64_t* get_struct_pointer(uint64_t* entry) { return (uint64_t*) *(entry + 9); }
+
 
 void set_next_entry(uint64_t* entry, uint64_t* next) { *entry       = (uint64_t) next; }
 void set_string(uint64_t* entry, char* identifier)   { *(entry + 1) = (uint64_t) identifier; }
@@ -607,6 +704,8 @@ void set_type(uint64_t* entry, uint64_t type)        { *(entry + 4) = type; }
 void set_value(uint64_t* entry, uint64_t value)      { *(entry + 5) = value; }
 void set_address(uint64_t* entry, uint64_t address)  { *(entry + 6) = address; }
 void set_scope(uint64_t* entry, uint64_t scope)      { *(entry + 7) = scope; }
+void set_struct(uint64_t* entry, char* identifier)            { *(entry + 8) = (uint64_t) identifier; }
+void set_struct_pointer(uint64_t* entry, uint64_t* pointer) { *(entry + 9) = (uint64_t) pointer; }
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -616,12 +715,14 @@ uint64_t BIGINT    = 2;
 uint64_t STRING    = 3;
 uint64_t PROCEDURE = 4;
 uint64_t MACRO     = 5;
+uint64_t STRUCT   = 6;  // Assignment 7
 
 // types
 uint64_t UINT64_T     = 1;
 uint64_t UINT64STAR_T = 2;
 uint64_t VOID_T       = 3;
 uint64_t UNDECLARED_T = 4;
+//uint64_t STRUCT = 5; // Assignment 8
 
 // symbol tables
 uint64_t GLOBAL_TABLE  = 1;
@@ -674,7 +775,7 @@ uint64_t is_mult_or_div_or_rem();
 uint64_t is_plus_or_minus();
 uint64_t is_comparison();
 uint64_t is_possibly_parameter(uint64_t is_already_variadic);
-
+uint64_t is_struct_or_uint64_t(); // Assignment 7
 uint64_t look_for_factor();
 uint64_t look_for_statement();
 uint64_t look_for_type();
@@ -709,7 +810,32 @@ uint64_t  compile_macro(uint64_t* entry);
 uint64_t  compile_call(char* procedure);
 uint64_t  compile_factor();
 uint64_t  compile_term();
+// Assignment 3
+uint64_t  compile_shift_expression();
+// Assignment 6
+//void calculate_array_indices(uint64_t* entry);
+//void calculate_array_address(uint64_t* entry);
+// Assignment 7
+void compile_structs();
+
+// Assignment 8
+void compile_selector();
+uint64_t is_selector_pointer();
+
+
+// Assignment 5
+
+//uint64_t compile_selector();
+//uint64_t set_array_size();
+
+//uint64_t load_array_element();
+
+
+//uint64_t compile_selector_expression();
+
+
 uint64_t  compile_simple_expression();
+uint64_t compile_not_expression();
 uint64_t  compile_expression();
 void      compile_while();
 void      compile_if();
@@ -720,6 +846,22 @@ uint64_t* compile_variable(uint64_t offset);
 uint64_t  compile_initialization(uint64_t type);
 void      compile_procedure(char* procedure, uint64_t type);
 void      compile_cstar();
+// Assignment 3
+
+uint64_t is_bit_shift();
+
+uint64_t is_not_shift();
+
+// Assignment 4
+
+//uint64_t bit_not_shift();
+
+// Assignment 9
+void compile_for();
+void compile_last_statement();
+
+
+
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -736,6 +878,7 @@ uint64_t number_of_assignments = 0;
 uint64_t number_of_while       = 0;
 uint64_t number_of_if          = 0;
 uint64_t number_of_return      = 0;
+uint64_t number_of_for = 0; // Assignment 9
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -745,6 +888,7 @@ void reset_parser() {
   number_of_while       = 0;
   number_of_if          = 0;
   number_of_return      = 0;
+  number_of_for = 0; // Assignment 9
 
   number_of_syntax_errors = 0;
 
@@ -977,6 +1121,17 @@ uint64_t F3_SW    = 2; // 010
 uint64_t F3_BEQ   = 0; // 000
 uint64_t F3_JALR  = 0; // 000
 uint64_t F3_ECALL = 0; // 000
+// === Assignment 3
+
+uint64_t F3_SLL = 1;
+uint64_t F3_SRL = 5;
+
+// Assignment 4
+
+uint64_t F3_AND = 7; // 111 = 7
+uint64_t F3_OR = 6; // 110 = 6
+uint64_t F3_XORI = 4; // 100 4
+uint64_t F3_XOR = 4;
 
 // f7-codes
 uint64_t F7_ADD  = 0;  // 0000000
@@ -985,6 +1140,19 @@ uint64_t F7_SUB  = 32; // 0100000
 uint64_t F7_DIVU = 1;  // 0000001
 uint64_t F7_REMU = 1;  // 0000001
 uint64_t F7_SLTU = 0;  // 0000000
+// === Assignment 3
+
+uint64_t F7_SLL = 0;
+uint64_t F7_SRL = 0;
+
+// Assignment 4
+
+uint64_t F7_AND = 0; // 
+uint64_t F7_OR = 0; 
+uint64_t F7_XORI = 0; // 
+uint64_t F7_XOR = 0;
+
+
 
 // f12-codes (immediates)
 uint64_t F12_ECALL = 0; // 000000000000
@@ -1042,6 +1210,18 @@ void emit_mul(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_divu(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_remu(uint64_t rd, uint64_t rs1, uint64_t rs2);
 void emit_sltu(uint64_t rd, uint64_t rs1, uint64_t rs2);
+// Assignment 3
+
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2);
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2);
+
+// Assignment 4
+void emit_and(uint64_t rd, uint64_t rs1, uint64_t rs2);
+void emit_or(uint64_t rd, uint64_t rs1, uint64_t rs2);
+void emit_xori(uint64_t rd, uint64_t rs1, uint64_t immediate);
+
+
+
 
 void emit_load(uint64_t rd, uint64_t rs1, uint64_t immediate);
 void emit_store(uint64_t rs1, uint64_t immediate, uint64_t rs2);
@@ -1163,6 +1343,18 @@ uint64_t ic_beq   = 0;
 uint64_t ic_jal   = 0;
 uint64_t ic_jalr  = 0;
 uint64_t ic_ecall = 0;
+// == Assignment 3
+uint64_t ic_sll  = 0;
+uint64_t ic_srl  = 0;
+
+// Assignment 4
+uint64_t ic_and  = 0;
+uint64_t ic_or  = 0;
+uint64_t ic_xori  = 0;
+
+
+
+
 
 char* binary_name = (char*) 0; // file name of binary
 
@@ -1211,6 +1403,16 @@ void reset_instruction_counters() {
   ic_jal   = 0;
   ic_jalr  = 0;
   ic_ecall = 0;
+
+  // == Assignment 3
+  ic_sll = 0;
+  ic_srl = 0;
+
+  // Assignment 4
+
+  ic_and = 0;
+  ic_or = 0;
+  ic_xori = 0;
 }
 
 // -----------------------------------------------------------------
@@ -1705,6 +1907,16 @@ void do_sub();
 void do_mul();
 void do_divu();
 void do_remu();
+// Assignment3
+void do_sll();
+void do_srl();
+
+// Assignment 4
+
+void do_and();
+void do_or();
+void do_xori();
+
 
 void do_sltu();
 
@@ -1762,7 +1974,18 @@ uint64_t STORE = 10;
 uint64_t BEQ   = 11;
 uint64_t JAL   = 12;
 uint64_t JALR  = 13;
-uint64_t ECALL = 14;
+
+// Assignment 3
+uint64_t SLL = 14;
+uint64_t SRL = 15;
+
+// === Assignment 4 ====
+uint64_t AND = 16;
+uint64_t OR = 17;
+uint64_t XORI = 18;
+
+uint64_t ECALL = 19;
+
 
 uint64_t* MNEMONICS; // assembly mnemonics of instructions
 
@@ -1797,6 +2020,15 @@ void init_disassembler() {
   *(MNEMONICS + DIVU)  = (uint64_t) "divu";
   *(MNEMONICS + REMU)  = (uint64_t) "remu";
   *(MNEMONICS + SLTU)  = (uint64_t) "sltu";
+     // Assignment 3
+  *(MNEMONICS + SLL)  = (uint64_t) "sll";
+  *(MNEMONICS + SRL)  = (uint64_t) "srl";
+  // Assignment 4
+  *(MNEMONICS + AND)  = (uint64_t) "and";
+  *(MNEMONICS + OR)  = (uint64_t) "or";
+  *(MNEMONICS + XORI)  = (uint64_t) "xori";
+
+
 
   reset_disassembler();
 
@@ -1967,6 +2199,18 @@ uint64_t nopc_store = 0;
 uint64_t nopc_beq   = 0;
 uint64_t nopc_jal   = 0;
 uint64_t nopc_jalr  = 0;
+// Assignment 3
+
+uint64_t nopc_sll  = 0;
+uint64_t nopc_srl  = 0;
+
+// Assignment 4
+uint64_t nopc_and  = 0;
+uint64_t nopc_or  = 0;
+uint64_t nopc_xori  = 0;
+
+
+
 
 // source profile
 
@@ -2049,6 +2293,16 @@ void reset_nop_counters() {
   nopc_beq   = 0;
   nopc_jal   = 0;
   nopc_jalr  = 0;
+      // Assignment 3
+
+  nopc_sll  = 0;
+  nopc_srl  = 0;
+
+  // Assignment 4
+  nopc_and  = 0;
+  nopc_or  = 0;
+  nopc_xori  = 0;
+
 }
 
 void reset_source_profile() {
@@ -2839,6 +3093,51 @@ uint64_t atoi(char* s) {
   // bit shifting since memory access can only be done at word granularity
   c = load_character(s, i);
 
+  // === Assignment 1 ===
+
+  // Check if the current character contains a hexadecimal prefix to detect hexadecimal values
+  if(c == 'x'){
+
+    // iterate one step further to get the first character
+    i = i + 1;
+    // load the next character value 
+    c = load_character(s, i);
+
+    // as long as c is not zero, we have a valid value
+    while(c != 0){
+
+      // check bound values to determine what we have to encode/decode
+
+      // detect upper letters
+      if(c >= 'A')
+        if(c <= 'F')
+          c = c - 55;
+
+      // detect lower letters
+      if(c >= 'a')
+        if(c <= 'f')
+          c = c - 67;
+
+      // detect numeric values
+      if(c >= '0')
+        if(c <= '9')
+          c = c - '0';
+
+
+      
+      n = n * 16 + c;
+
+
+
+      //get the next charakter
+      i = i + 1;
+      c = load_character(s, i);
+
+    }
+
+    return n;
+  }
+
   // loop until s is terminated
   while (c != 0) {
     // the numerical value of ASCII-encoded decimal digits
@@ -3488,9 +3787,10 @@ void get_character() {
     character = *character_buffer;
 
     number_of_read_characters = number_of_read_characters + 1;
-  } else if (number_of_read_bytes == 0)
+  } else if (number_of_read_bytes == 0){
     // reached end of file
     character = CHAR_EOF;
+  }
   else {
     printf("%s: could not read character from input file %s\n", selfie_name, source_name);
 
@@ -3659,6 +3959,10 @@ uint64_t identifier_or_keyword() {
     return SYM_RETURN;
   else if (identifier_string_match(SYM_WHILE))
     return SYM_WHILE;
+  else if(identifier_string_match(SYM_FOR))
+    return SYM_FOR;
+  else if (identifier_string_match(SYM_STRUCT))
+    return SYM_STRUCT;
   else if (identifier_string_match(SYM_INT))
     // selfie bootstraps int to uint64_t!
     return SYM_UINT64;
@@ -3674,6 +3978,19 @@ uint64_t identifier_or_keyword() {
   else
     return SYM_IDENTIFIER;
 }
+// ===== Assignment 1 ===== 
+// used to identify hexadecimal values
+// it uses is_letter and is_digit from selfie to determine a valid hexadecimal value
+// See further explanation below
+uint64_t is_hexa(){
+  if(is_letter(character))
+    return 1;
+  else if (is_digit(character))
+    return 1;
+  else
+    return 0;
+}
+
 
 void get_symbol() {
   uint64_t i;
@@ -3734,6 +4051,52 @@ void get_symbol() {
 
           get_character();
         }
+    // === Assignment 1 ===
+
+        // similiar to the is_digit statement, we can check if we have a hexadecimal value
+        // and then store load the character as seen in the above statement. 
+        if(character== 'x'){
+          // check if the current character is zero
+          // store and iterate further
+          if (load_character(integer, 0) == '0') {
+               store_character(integer, 0, character);
+               get_character();
+          }
+
+          /// FIX /// 
+          // use selfies own method to check whetever if we deal with a a-f, A-F or 0-9 digit number
+          //while(is_character_letter_or_digit_or_underscore()){
+
+            // fixed this to a own method, as "is_character_letter_or_digit_or_underscore"
+            // can cause issues for _ values (which are not tested but still)
+            while(is_hexa()){
+              // we start with i - 1 because of the prefix
+              if(i-1 >= 16){
+                //taken from above 
+                if (integer_is_signed)
+                  syntax_error_message("signed integer out of bound");  
+                else
+                  syntax_error_message("integer out of bound");
+                exit(EXITCODE_SCANNERERROR);
+              }
+
+            // store the character that is not out of bound or that is not 0
+            store_character(integer, i, character);
+
+
+
+            // iterate further 
+            i = i + 1;
+
+            // pull the next character
+            get_character();
+            }
+
+            }
+            
+
+        // ===================
+      
 
         store_character(integer, i, 0); // null-terminated string
 
@@ -3773,7 +4136,8 @@ void get_symbol() {
 
         symbol = SYM_CHARACTER;
 
-      } else if (character == CHAR_DOUBLEQUOTE) {
+      } 
+      else if (character == CHAR_DOUBLEQUOTE) {
         get_character();
 
         // accommodate string and null for termination,
@@ -3849,6 +4213,13 @@ void get_symbol() {
 
       } else if (character == CHAR_DASH) {
         get_character();
+         if(character == CHAR_GT) {
+          //print("%s found SYM ARROW!");
+          symbol = SYM_ARROW;
+
+          get_character();
+
+        } else
 
         symbol = SYM_MINUS;
 
@@ -3884,12 +4255,26 @@ void get_symbol() {
 
       } else if (character == CHAR_LT) {
         get_character();
+        // Assignment 2 =====
 
+        // since we use here already the char_lt check
+        // we can check again if we got another char_lt
+        // which indicates that we are dealing with a bitwise shift "<<"" operator.
+        // the same approach is used for the right bitwise shift operator ">>" down below.
+       
         if (character == CHAR_EQUAL) {
           get_character();
 
           symbol = SYM_LEQ;
-        } else
+        } else if(character == CHAR_LT){
+          get_character();
+
+        // set the symbol to our left shift
+        symbol = SYM_L_BIT_SHIFT;
+
+          // fetch the next character
+        } 
+        else
           symbol = SYM_LT;
 
       } else if (character == CHAR_GT) {
@@ -3899,10 +4284,37 @@ void get_symbol() {
           get_character();
 
           symbol = SYM_GEQ;
-        } else
+        } // Assignment 2 =====
+
+        // Same as described above at "char_lt"
+        else if(character == CHAR_GT){
+          get_character();
+          symbol = SYM_R_BIT_SHIFT;
+        }
+        else
           symbol = SYM_GT;
 
-      } else if (character == CHAR_DOT) {
+       }// Assignment 4
+
+      else if(character == CHAR_OR){
+
+        get_character();
+        symbol = SYM_OR;
+      }
+      else if(character == CHAR_AND){
+
+        get_character();
+        symbol = SYM_AND;
+      }
+     
+      else if(character == CHAR_XORI){
+        get_character();
+        symbol = SYM_XORI;
+      } 
+
+
+     
+      else if (character == CHAR_DOT) {
         get_character();
 
         if (character == CHAR_DOT) {
@@ -3917,7 +4329,18 @@ void get_symbol() {
 
         symbol = SYM_ELLIPSIS;
 
-      } else {
+     } else if(character == CHAR_LBRACKET){
+
+        get_character();
+        symbol = SYM_LBRACKET;
+      } else if(character == CHAR_RBRACKET){
+
+        get_character();
+        symbol = SYM_RBRACKET;
+      }
+       
+      
+      else {
         print_line_number("syntax error", line_number);
         print("found unknown character ");
         print_character(character);
@@ -4052,6 +4475,8 @@ uint64_t* get_scoped_symbol_table_entry(char* string, uint64_t class) {
   if (class == VARIABLE)
     // local variables override global variables
     entry = search_symbol_table(local_symbol_table, string, VARIABLE);
+  else if (class == STRUCT) // Assignment 7
+    entry = search_symbol_table(local_symbol_table, string, STRUCT);
   else if (class == PROCEDURE)
     // library procedures override declared or defined procedures
     entry = search_symbol_table(library_symbol_table, string, PROCEDURE);
@@ -4175,6 +4600,14 @@ uint64_t is_plus_or_minus() {
   else
     return 0;
 }
+uint64_t is_struct_or_uint64_t() { // Assignment 7 
+  if (symbol == SYM_STRUCT)
+    return 1;
+  else if (symbol == SYM_UINT64)
+    return 1;
+  else
+    return 0;
+}
 
 uint64_t is_comparison() {
   if (symbol == SYM_EQUALITY)
@@ -4229,6 +4662,8 @@ uint64_t look_for_statement() {
     return 0;
   else if (symbol == SYM_WHILE)
     return 0;
+  else if(symbol == SYM_FOR)
+    return 0;
   else if (symbol == SYM_IF)
     return 0;
   else if (symbol == SYM_RETURN)
@@ -4241,6 +4676,10 @@ uint64_t look_for_statement() {
 
 uint64_t look_for_type() {
   if (symbol == SYM_UINT64)
+    return 0;
+  else if(symbol == SYM_STRUCT)
+    return 0;
+  else if(symbol == SYM_ARROW)
     return 0;
   else if (symbol == SYM_VOID)
     return 0;
@@ -4411,10 +4850,20 @@ void load_small_and_medium_integer(uint64_t reg, uint64_t value) {
 uint64_t* get_variable_or_big_int(char* variable_or_big_int, uint64_t class) {
   uint64_t* entry;
 
+  
+
   if (class == BIGINT)
     return search_global_symbol_table(variable_or_big_int, class);
   else {
     entry = get_scoped_symbol_table_entry(variable_or_big_int, class);
+
+    if (entry == (uint64_t*) 0) { // Assignment 7, we must check here for the struct to avoid the error previously.
+      entry = get_scoped_symbol_table_entry(variable_or_big_int, STRUCT);
+    }
+
+
+
+
 
     if (entry != (uint64_t*) 0)
       return entry;
@@ -4425,6 +4874,7 @@ uint64_t* get_variable_or_big_int(char* variable_or_big_int, uint64_t class) {
     }
   }
 }
+
 
 void load_upper_base_address(uint64_t* entry) {
   uint64_t lower;
@@ -4453,6 +4903,8 @@ uint64_t load_variable_or_big_int(char* variable_or_big_int, uint64_t class) {
   uint64_t offset;
 
   // assert: n = allocated_temporaries
+
+ 
 
   entry = get_variable_or_big_int(variable_or_big_int, class);
 
@@ -4722,6 +5174,10 @@ uint64_t compile_factor() {
   uint64_t type;
   uint64_t negative;
   uint64_t dereference;
+  uint64_t* entry;
+
+    
+ 
   char* variable_or_procedure_name;
 
   // assert: n = allocated_temporaries
@@ -4760,6 +5216,8 @@ uint64_t compile_factor() {
   } else
     has_cast = 0;
 
+   
+
   // optional: -
   if (symbol == SYM_MINUS) {
     negative = 1;
@@ -4781,12 +5239,25 @@ uint64_t compile_factor() {
     dereference = 0;
 
   // variable or call?
+ 
   if (symbol == SYM_IDENTIFIER) {
     variable_or_procedure_name = identifier;
 
     get_symbol();
+    if (symbol == SYM_ARROW){
 
-    if (symbol == SYM_LPARENTHESIS) {
+      print("%s,called me!");
+      entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+
+      type = load_variable_or_big_int(variable_or_procedure_name, STRUCT);
+
+      emit_load(current_temporary(), current_temporary(), 0);
+
+    }
+
+    
+
+    else if (symbol == SYM_LPARENTHESIS) {
       get_symbol();
 
       // procedure call: identifier "(" ... ")"
@@ -4873,6 +5344,35 @@ uint64_t compile_factor() {
     return type;
 }
 
+uint64_t compile_not_expression(){
+  uint64_t ltype;
+  //uint64_t operator_symbol;
+  // uint64_t rtype;
+  //printf("%s: 123!\n", selfie_name);
+
+  // assert: n = allocated_temporaries
+
+
+  // assert: allocated_temporaries == n + 1
+
+  if(is_not_shift()) {
+    //operator_symbol = symbol;
+
+    get_symbol();
+    ltype = compile_factor();
+
+    //rtype = compile_factor();
+    // assert: allocated_temporaries == n + 2
+    emit_xori(current_temporary(), current_temporary(), -1);
+    //tfree(1);
+  } else{
+    ltype = compile_factor();
+  }
+  // assert: allocated_temporaries == n + 1
+  return ltype;
+  // type of term is grammar attribute
+}
+
 uint64_t compile_term() {
   uint64_t ltype;
   uint64_t operator_symbol;
@@ -4880,7 +5380,7 @@ uint64_t compile_term() {
 
   // assert: n = allocated_temporaries
 
-  ltype = compile_factor();
+  ltype = compile_not_expression();
 
   // assert: allocated_temporaries == n + 1
 
@@ -4890,7 +5390,7 @@ uint64_t compile_term() {
 
     get_symbol();
 
-    rtype = compile_factor();
+    rtype = compile_not_expression();
 
     // assert: allocated_temporaries == n + 2
 
@@ -4912,6 +5412,122 @@ uint64_t compile_term() {
   // type of term is grammar attribute
   return ltype;
 }
+
+// == Assignment 3
+
+// Assignment 4
+uint64_t is_bit_shift(){
+  if(symbol == SYM_L_BIT_SHIFT)
+    return 1;
+  else if(symbol == SYM_R_BIT_SHIFT)
+    return 1;
+  // else if(symbol == SYM_XORI)
+  //   return 1;
+  else if(symbol == SYM_OR)
+    return 1;
+  else if(symbol == SYM_AND) // Assignment 4
+    return 1;
+  else
+    return 0;
+}
+
+// uint64_t bit_not_shift(){
+//   if(symbol == SYM_XORI)
+//     return 1;
+//   return 0;
+// }
+
+
+
+uint64_t is_not_shift(){
+  if(symbol == SYM_XORI)
+    return 1;
+  else
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+// Assignment 3
+uint64_t compile_shift_expression(){
+
+  uint64_t ltype;
+  uint64_t operator_symbol;
+  uint64_t rtype;
+
+  //uint64_t is_array;
+
+
+  //printf("%s: 123!\n", selfie_name);
+
+  // assert: n = allocated_temporaries
+
+  ltype = compile_simple_expression();
+
+  // assert: allocated_temporaries == n + 1
+
+  // if(symbol == SYM_LBRACKET){
+
+  //   is_array = compile_selector();
+  // }
+
+  while (is_bit_shift()) {
+    operator_symbol = symbol;
+
+    get_symbol();
+
+    rtype = compile_simple_expression();
+
+    // assert: allocated_temporaries == n + 2
+
+    if (ltype != rtype)
+      type_warning(ltype, rtype);
+
+
+    if(operator_symbol == SYM_L_BIT_SHIFT){
+        emit_sll(previous_temporary(), previous_temporary(), current_temporary());
+    }  
+    else if(operator_symbol == SYM_R_BIT_SHIFT){
+        emit_srl(previous_temporary(), previous_temporary(), current_temporary());
+    }
+  
+    else if(operator_symbol == SYM_OR){
+
+        emit_or(previous_temporary(), previous_temporary(), current_temporary());
+    }
+
+    else if(operator_symbol == SYM_AND){
+        //printf("%s: AND CALLED!\n", selfie_name);
+
+        emit_and(previous_temporary(), previous_temporary(), current_temporary());
+    }
+   
+   
+    
+
+
+    tfree(1);
+  }
+
+  // assert: allocated_temporaries == n + 1
+
+  // type of term is grammar attribute
+  return ltype;
+}
+
+
+// ===========
+
+
+
+
 
 uint64_t compile_simple_expression() {
   uint64_t ltype;
@@ -4993,7 +5609,7 @@ uint64_t compile_expression() {
 
   // assert: n = allocated_temporaries
 
-  ltype = compile_simple_expression();
+  ltype = compile_shift_expression();  // === Assignment 3 
 
   // assert: allocated_temporaries == n + 1
 
@@ -5003,7 +5619,7 @@ uint64_t compile_expression() {
 
     get_symbol();
 
-    rtype = compile_simple_expression();
+    rtype = compile_shift_expression(); // === Assignment 3 
 
     // assert: allocated_temporaries == n + 2
 
@@ -5064,6 +5680,340 @@ uint64_t compile_expression() {
   // type of expression is grammar attribute
   return ltype;
 }
+
+
+void compile_last_statement(){
+
+  uint64_t ltype;
+  uint64_t rtype;
+  char* variable_or_procedure_name;
+  uint64_t* entry;
+  uint64_t offset;
+  uint64_t is_struct; // Assignment 7
+  // Init value for compiler
+  is_struct = 0;
+
+
+  // assert: allocated_temporaries == 0
+
+  while (look_for_statement()) {
+    syntax_error_unexpected();
+
+    if (symbol == SYM_EOF)
+      exit(EXITCODE_PARSERERROR);
+    else
+      get_symbol();
+  }
+
+
+
+  // ["*"]
+  if (symbol == SYM_ASTERISK) {
+    get_symbol();
+
+    // "*" variable
+    if (symbol == SYM_IDENTIFIER) {
+      ltype = load_variable_or_big_int(identifier, VARIABLE);
+
+      if (ltype != UINT64STAR_T)
+        type_warning(UINT64STAR_T, ltype);
+
+      get_symbol();
+    // "*" "(" expression ")"
+    } else if (symbol == SYM_LPARENTHESIS) {
+      get_symbol();
+
+      ltype = compile_expression();
+
+      if (ltype != UINT64STAR_T)
+        type_warning(UINT64STAR_T, ltype);
+
+      get_expected_symbol(SYM_RPARENTHESIS);
+    } else {
+      syntax_error_symbol(SYM_LPARENTHESIS);
+
+      return;
+    }
+   
+   
+    // "*" ( variable | "(" expression ")" ) "=" expression
+    if (symbol == SYM_ASSIGN) {
+      get_symbol();
+
+      rtype = compile_expression();
+
+      if (rtype != UINT64_T)
+        type_warning(UINT64_T, rtype);
+
+      emit_store(previous_temporary(), 0, current_temporary());
+
+      tfree(2);
+
+      number_of_assignments = number_of_assignments + 1;
+    } else {
+      syntax_error_symbol(SYM_ASSIGN);
+
+      tfree(1);
+    }
+
+      get_expected_symbol(SYM_SEMICOLON);
+  }
+  // variable "=" expression | call
+  else if (symbol == SYM_IDENTIFIER) {
+    variable_or_procedure_name = identifier;
+
+    //here in this loop, we identify (i assume at least) the struct identifier inside the main function.
+    // so it would be a good idead to get here the struct, so that we can load the offset member of the struct.
+    // Assignment 8 personal notes.
+
+    
+    get_symbol();
+     if (symbol == SYM_ARROW) {
+
+       print("%s called");
+        get_symbol();
+      if(symbol == SYM_IDENTIFIER){
+            print(identifier);
+
+
+            entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+           //entry = is_struct_variable(get_type(entry));
+            //entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+
+
+          ltype = load_variable_or_big_int(identifier, STRUCT);
+          
+
+
+
+        //is_struct_variable(get_type(entry));
+
+
+
+        //load_upper_base_address(entry);
+
+        //ltype = UINT64STAR_T;
+
+
+
+        //entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+        //rtype = load_variable_or_big_int(identifier, VARIABLE);
+
+
+
+  
+  offset = get_address(entry);
+
+  printf("%lu\n", offset);
+
+  // if (is_signed_integer(offset, 12)) {
+  //   talloc();
+
+  //   //emit_load(current_temporary(), get_struct_pointer(ltype), offset);
+  // } else {
+  //   load_upper_base_address(entry);
+
+  //   emit_load(current_temporary(), current_temporary(), sign_extend(get_bits(offset, 0, 12), 12));
+  // }
+  //       //is_struct_variable(ltype);
+
+  //       get_symbol();
+       
+  //     }
+      //compile_selector();
+
+
+          //is_struct = 1;
+
+            //get_symbol();
+            
+      
+     
+      
+      }
+
+     }
+   
+    
+    // procedure call
+    if (symbol == SYM_LPARENTHESIS) {
+      get_symbol();
+
+      compile_call(variable_or_procedure_name);
+
+      // reset return register to initial return value
+      // for missing return expressions
+      emit_addi(REG_A0, REG_ZR, 0);
+
+      get_expected_symbol(SYM_SEMICOLON);
+    
+
+    // variable "=" expression
+    } else if (symbol == SYM_ASSIGN) {
+      entry = get_variable_or_big_int(variable_or_procedure_name, VARIABLE);
+
+      ltype = get_type(entry);
+
+      get_symbol();
+
+      rtype = compile_expression();
+
+      if (ltype != rtype)
+        type_warning(ltype, rtype);
+
+      offset = get_address(entry);
+      if (is_struct) {
+        emit_store(previous_temporary(), 0, current_temporary());
+
+        tfree(2);
+      }
+      else if (is_signed_integer(offset, 12)) {
+        emit_store(get_scope(entry), offset, current_temporary());
+
+        tfree(1);
+      } else {
+        load_upper_base_address(entry);
+
+        emit_store(current_temporary(), sign_extend(get_bits(offset, 0, 12), 12), previous_temporary());
+
+        tfree(2);
+      }
+
+      is_struct = 0;
+      number_of_assignments = number_of_assignments + 1;
+
+      get_expected_symbol(SYM_RPARENTHESIS);
+    } else
+      syntax_error_unexpected();
+  }
+  // while statement?
+  else if (symbol == SYM_WHILE) {
+    compile_while();
+  }
+
+  // Assignment 9
+  else if(symbol == SYM_FOR){
+    compile_for();
+  }
+  // if statement?
+  else if (symbol == SYM_IF) {
+    compile_if();
+  }
+  // return statement?
+  else if (symbol == SYM_RETURN) {
+    compile_return();
+
+    get_expected_symbol(SYM_SEMICOLON);
+  }
+
+  // assert: allocated_temporaries == 0
+}
+
+
+
+// // Assignment 9
+void compile_for(){
+
+  uint64_t jump_back_to_for;
+  uint64_t branch_forward_to_end;
+  uint64_t jump_back_to_for_counter;
+  uint64_t branch_to_counter; 
+  
+  
+  // assert: allocated_temporaries == 0
+  jump_back_to_for_counter = 0;
+  branch_forward_to_end = 0;
+  branch_to_counter = 0;
+    jump_back_to_for = 0;
+
+  // while ( expression )
+  if (symbol == SYM_FOR) {
+    get_symbol();
+
+    // for (
+    if (symbol == SYM_LPARENTHESIS) {
+                jump_back_to_for = code_size;
+
+      get_symbol();
+      compile_statement();
+
+     
+
+      // for(i = 0; i 
+      if(symbol == SYM_IDENTIFIER){
+     
+          get_symbol();
+          
+          // i < 3
+          if(symbol == SYM_LT){
+              get_symbol();
+              compile_expression();
+             
+              
+              // we do not know where to branch, fixup later
+    
+              // for i < 3
+
+             
+              if(symbol == SYM_SEMICOLON){
+                 branch_forward_to_end = code_size;
+              
+              emit_beq(current_temporary(), REG_ZR, 0);
+              tfree(1);
+                get_symbol();
+             
+
+                     // we do not know where to branch, fixup later
+
+                if(symbol == SYM_IDENTIFIER){
+
+                   jump_back_to_for_counter = code_size;
+                  compile_last_statement();
+                 
+
+                  if(symbol == SYM_LBRACE){
+                    
+                    get_symbol();
+
+                    while(is_not_rbrace_or_eof()){
+                      compile_statement();
+                        //emit_jal(REG_ZR, jump_back_to_for - code_size);
+
+                    }
+                    get_required_symbol(SYM_RBRACE);
+                  }
+                } 
+              }
+          }  
+      }  
+
+    }  
+
+  }
+
+
+   // we use JAL for the unconditional jump back to the loop condition because:
+  // 1. the RISC-V doc recommends to do so to not disturb branch prediction
+  // 2. GCC also uses JAL for the unconditional back jump of a while loop
+  if (branch_forward_to_end != 0)
+    // first instruction after loop body will be generated here
+    // now we have the address for the conditional branch from above
+    fixup_relative_BFormat(branch_forward_to_end);
+
+  
+  // assert: allocated_temporaries == 0
+  number_of_for = number_of_for + 1;
+  
+  }
+    
+
+
+
+  
+
+
+
+
 
 void compile_while() {
   uint64_t jump_back_to_while;
@@ -5143,7 +6093,8 @@ void compile_if() {
       compile_expression();
 
       // if the "if" case is not true we branch to "else" (if provided)
-      branch_forward_to_else_or_end = code_size;
+      branch_forward_to_else_or_end = code_size; // Assignemnt 9 Notes: This is used as some kind of "anchor"
+      // 
 
       emit_beq(current_temporary(), REG_ZR, 0);
 
@@ -5159,7 +6110,7 @@ void compile_if() {
           while (is_not_rbrace_or_eof())
             compile_statement();
 
-          get_required_symbol(SYM_RBRACE);
+            get_required_symbol(SYM_RBRACE);
         } else
         // only one statement without {}
           compile_statement();
@@ -5172,14 +6123,14 @@ void compile_if() {
           // by unconditionally jumping to the end
           jump_forward_to_end = code_size;
 
-          emit_jal(REG_ZR, 0);
+          emit_jal(REG_ZR, jump_forward_to_end );
 
           // if the "if" case was not true we branch here
           fixup_relative_BFormat(branch_forward_to_else_or_end);
 
           // zero or more statements: { statement }
           if (symbol == SYM_LBRACE) {
-            get_symbol();
+            get_symbol(); 
 
             while (is_not_rbrace_or_eof())
               compile_statement();
@@ -5245,6 +6196,10 @@ void compile_statement() {
   char* variable_or_procedure_name;
   uint64_t* entry;
   uint64_t offset;
+  uint64_t is_struct; // Assignment 7
+  // Init value for compiler
+  is_struct = 0;
+
 
   // assert: allocated_temporaries == 0
 
@@ -5256,6 +6211,8 @@ void compile_statement() {
     else
       get_symbol();
   }
+
+
 
   // ["*"]
   if (symbol == SYM_ASTERISK) {
@@ -5284,7 +6241,8 @@ void compile_statement() {
 
       return;
     }
-
+   
+   
     // "*" ( variable | "(" expression ")" ) "=" expression
     if (symbol == SYM_ASSIGN) {
       get_symbol();
@@ -5311,8 +6269,79 @@ void compile_statement() {
   else if (symbol == SYM_IDENTIFIER) {
     variable_or_procedure_name = identifier;
 
-    get_symbol();
+    //here in this loop, we identify (i assume at least) the struct identifier inside the main function.
+    // so it would be a good idead to get here the struct, so that we can load the offset member of the struct.
+    // Assignment 8 personal notes.
 
+    
+    get_symbol();
+     if (symbol == SYM_ARROW) {
+
+       print("%s called");
+        get_symbol();
+      if(symbol == SYM_IDENTIFIER){
+            print(identifier);
+
+
+            entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+           //entry = is_struct_variable(get_type(entry));
+            //entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+
+
+          ltype = load_variable_or_big_int(identifier, STRUCT);
+          
+
+
+
+        //is_struct_variable(get_type(entry));
+
+
+
+        //load_upper_base_address(entry);
+
+        //ltype = UINT64STAR_T;
+
+
+
+        //entry = get_variable_or_big_int(variable_or_procedure_name, STRUCT);
+        //rtype = load_variable_or_big_int(identifier, VARIABLE);
+
+
+
+  
+  offset = get_address(entry);
+
+  printf("%lu\n", offset);
+
+  // if (is_signed_integer(offset, 12)) {
+  //   talloc();
+
+  //   //emit_load(current_temporary(), get_struct_pointer(ltype), offset);
+  // } else {
+  //   load_upper_base_address(entry);
+
+  //   emit_load(current_temporary(), current_temporary(), sign_extend(get_bits(offset, 0, 12), 12));
+  // }
+  //       //is_struct_variable(ltype);
+
+  //       get_symbol();
+       
+  //     }
+      //compile_selector();
+
+
+          //is_struct = 1;
+
+            //get_symbol();
+            
+      
+     
+      
+      }
+
+     }
+   
+    
     // procedure call
     if (symbol == SYM_LPARENTHESIS) {
       get_symbol();
@@ -5324,6 +6353,7 @@ void compile_statement() {
       emit_addi(REG_A0, REG_ZR, 0);
 
       get_expected_symbol(SYM_SEMICOLON);
+    
 
     // variable "=" expression
     } else if (symbol == SYM_ASSIGN) {
@@ -5339,8 +6369,12 @@ void compile_statement() {
         type_warning(ltype, rtype);
 
       offset = get_address(entry);
+      if (is_struct) {
+        emit_store(previous_temporary(), 0, current_temporary());
 
-      if (is_signed_integer(offset, 12)) {
+        tfree(2);
+      }
+      else if (is_signed_integer(offset, 12)) {
         emit_store(get_scope(entry), offset, current_temporary());
 
         tfree(1);
@@ -5352,6 +6386,7 @@ void compile_statement() {
         tfree(2);
       }
 
+      is_struct = 0;
       number_of_assignments = number_of_assignments + 1;
 
       get_expected_symbol(SYM_SEMICOLON);
@@ -5361,6 +6396,11 @@ void compile_statement() {
   // while statement?
   else if (symbol == SYM_WHILE) {
     compile_while();
+  }
+
+  // Assignment 9
+  else if(symbol == SYM_FOR){
+    compile_for();
   }
   // if statement?
   else if (symbol == SYM_IF) {
@@ -5381,8 +6421,11 @@ uint64_t compile_type() {
 
   type = UINT64_T;
 
+  
+
   if (symbol == SYM_UINT64) {
     get_symbol();
+   
 
     while (symbol == SYM_UINT64)
       // we tolerate multiple uint64_t aliases for bootstrapping
@@ -5416,10 +6459,59 @@ uint64_t compile_type() {
 uint64_t* compile_variable(uint64_t offset) {
   uint64_t type;
   uint64_t* entry;
+    char* variable_or_procedure_name;
 
+  entry = (uint64_t*) 0;
+
+
+
+  
   type = compile_type();
+  if (symbol == SYM_STRUCT) { // Assignment 7
+    get_symbol();
+   
+    if (symbol == SYM_IDENTIFIER) {
+      get_symbol();
 
+      variable_or_procedure_name = identifier;
+
+      if (symbol == SYM_ASTERISK) {
+        get_symbol();
+
+        if (symbol == SYM_IDENTIFIER) {
+          get_symbol();
+
+          type = UINT64STAR_T;
+
+          create_symbol_table_entry(LOCAL_TABLE, identifier, line_number, STRUCT, type, 0, offset);
+
+          entry = get_variable_or_big_int(identifier, STRUCT);
+
+          set_struct(entry, variable_or_procedure_name);
+
+        } else {
+          syntax_error_symbol(SYM_IDENTIFIER);
+
+          exit(EXITCODE_PARSERERROR);
+        }
+
+      } else {
+        syntax_error_symbol(SYM_ASTERISK);
+
+        exit(EXITCODE_PARSERERROR);
+      }
+
+    } else {
+      syntax_error_symbol(SYM_IDENTIFIER);
+
+      exit(EXITCODE_PARSERERROR);
+    }
+
+  }
+  
   if (symbol == SYM_IDENTIFIER) {
+   
+  
     // TODO: check if identifier has already been declared
     entry = create_symbol_table_entry(LOCAL_TABLE, identifier, line_number, VARIABLE, type, 0, offset);
 
@@ -5431,6 +6523,222 @@ uint64_t* compile_variable(uint64_t offset) {
   }
 
   return entry;
+
+}
+uint64_t* is_struct_variable(uint64_t offset) { // Assignment 8 to identify structs
+  uint64_t type;
+  uint64_t* declare_valid_field;
+  char* str_type;
+  char* variable_or_procedure_name;
+  declare_valid_field = smalloc(2 * UINT64_T + 2 * UINT64STAR_T);
+  
+  if (symbol == SYM_STRUCT) {
+    get_symbol();
+    print("%s yes it is a struct!!");
+    if (symbol == SYM_IDENTIFIER) {
+    
+      get_symbol();
+      str_type = identifier;
+      if (symbol == SYM_ASTERISK) {
+        get_symbol();
+        if (symbol == SYM_IDENTIFIER) {
+          variable_or_procedure_name = identifier;
+          get_symbol();
+          if (symbol == SYM_SEMICOLON) {
+
+            // since we confirmed at this point that we have a struct variable, we can safely assume that the struct type is correct
+            // and set the arimethic types to the predfined struct types // Assignment 8
+            *(declare_valid_field + 1) = (uint64_t) variable_or_procedure_name;
+            *(declare_valid_field + 2) = (uint64_t) str_type;
+            *(declare_valid_field + 3) = offset;
+            get_symbol();
+          } else {
+            syntax_error_symbol(SYM_SEMICOLON);
+            exit(EXITCODE_PARSERERROR);
+          }
+        } else {
+          syntax_error_symbol(SYM_IDENTIFIER);
+
+
+
+
+          exit(EXITCODE_PARSERERROR);
+        }
+
+      }
+    }
+  } else if (symbol == SYM_UINT64) {
+    type = compile_type();
+
+    if (symbol == SYM_IDENTIFIER) {
+      get_symbol();
+
+      if (symbol == SYM_SEMICOLON) {
+        *(declare_valid_field + 1) = (uint64_t) identifier;
+
+        *(declare_valid_field + 2) = type;
+
+        *(declare_valid_field + 3) = offset;
+
+        get_symbol();
+
+      } else {
+        syntax_error_symbol(SYM_SEMICOLON);
+
+        exit(EXITCODE_PARSERERROR);
+      }
+
+
+    } else {
+      syntax_error_symbol(SYM_IDENTIFIER);
+
+      exit(EXITCODE_PARSERERROR);
+    }
+
+
+  } else {
+    syntax_error_symbol(SYM_UINT64);
+
+    exit(EXITCODE_PARSERERROR);
+  }
+  return declare_valid_field;
+}
+
+uint64_t is_selector_pointer(){
+  if(symbol == SYM_ARROW)
+    return 1;
+  else
+    return 0;
+}
+
+void compile_selector(){
+   if(symbol == SYM_INTEGER){
+
+      get_symbol();
+    }
+  if (symbol == SYM_IDENTIFIER) {
+    get_symbol();
+
+    if(symbol == SYM_INTEGER){
+
+      get_symbol();
+    }
+  } else {
+    syntax_error_symbol(SYM_IDENTIFIER);
+
+    exit(EXITCODE_PARSERERROR);
+  }
+}
+
+void compile_structs() {
+  uint64_t offset;
+  uint64_t* validate_field;
+  uint64_t* previous_field;
+  uint64_t* entry;
+  char* variable_or_procedure_name;
+  offset = 0;
+  validate_field = (uint64_t*) 0;
+  previous_field = (uint64_t*) 0;
+
+  entry = (uint64_t*) 0;
+
+  get_symbol();
+  
+  
+    
+  if (symbol == SYM_IDENTIFIER) {
+    variable_or_procedure_name = identifier;
+
+
+    get_symbol();
+
+   
+    
+    if (symbol == SYM_ASTERISK) {
+
+      //pointer to struct
+      get_symbol();
+
+      if (symbol == SYM_IDENTIFIER) {
+        entry = search_global_symbol_table(identifier, STRUCT);
+
+        // if there is no such entry in the global symbol table, we create one
+        if (entry == (uint64_t*) 0) {
+          data_size = data_size + SIZEOFUINT64STAR;
+
+          create_symbol_table_entry(GLOBAL_TABLE, identifier, line_number, STRUCT, UINT64STAR_T, 0, -data_size);
+
+          entry = search_global_symbol_table(identifier, STRUCT);
+
+          set_struct(entry, variable_or_procedure_name);
+        } else {
+          print_line_number("warning", line_number);
+
+        }
+
+        get_symbol();
+
+        if (symbol == SYM_SEMICOLON)
+          get_symbol();
+
+        else {
+          syntax_error_symbol(SYM_IDENTIFIER);
+
+          exit(EXITCODE_PARSERERROR);
+        }
+
+      } else {
+        syntax_error_symbol(SYM_IDENTIFIER);
+
+        exit(EXITCODE_PARSERERROR);
+      }
+
+    } else if (symbol == SYM_LBRACE) {
+      entry = search_global_symbol_table(variable_or_procedure_name, STRUCT);
+
+      if (entry == (uint64_t*) 0) {
+        data_size = data_size + WORDSIZE;
+
+        create_symbol_table_entry(GLOBAL_TABLE, identifier, line_number, STRUCT, VOID_T, 0, -data_size);
+
+        entry = search_global_symbol_table(identifier, STRUCT);
+
+        set_struct(entry, variable_or_procedure_name);
+      } else {
+        print_line_number("warning", line_number);
+
+      }
+
+      get_symbol();
+
+      while (is_not_rbrace_or_eof()) {
+        validate_field = is_struct_variable(offset);
+        if (offset == 0){
+          //print("offset set to 0");
+          set_struct_pointer(entry, validate_field);
+        } else {
+          *(previous_field + 0) = (uint64_t) validate_field;
+        }
+
+
+        // set previous field to current field
+        previous_field = validate_field;
+
+        offset = offset + WORDSIZE;
+
+      }
+      if (offset > 0)
+        *(previous_field + 0) = (uint64_t) 0;
+
+      get_expected_symbol(SYM_RBRACE);
+      get_expected_symbol(SYM_SEMICOLON);
+    }
+   
+  } else {
+    syntax_error_symbol(SYM_IDENTIFIER);
+
+    exit(EXITCODE_PARSERERROR);
+  }
 }
 
 uint64_t compile_initialization(uint64_t type) {
@@ -5442,9 +6750,12 @@ uint64_t compile_initialization(uint64_t type) {
 
   has_cast = 0;
 
+
+
   if (symbol == SYM_ASSIGN) {
     get_symbol();
 
+ 
     // optional: [ cast ]
     if (symbol == SYM_LPARENTHESIS) {
       has_cast = 1;
@@ -5501,6 +6812,8 @@ void compile_procedure(char* procedure, uint64_t type) {
   number_of_parameters = 0;
 
   // try parsing formal parameters
+  
+ 
 
   if (symbol == SYM_LPARENTHESIS) {
     get_symbol();
@@ -5604,16 +6917,22 @@ void compile_procedure(char* procedure, uint64_t type) {
     // try parsing local variable declarations
 
     number_of_local_variable_bytes = 0;
+ 
 
-    while (symbol == SYM_UINT64) {
+   
+
+    while (is_struct_or_uint64_t()) {
+      print("%s yes!");
+
       number_of_local_variable_bytes = number_of_local_variable_bytes + WORDSIZE;
 
       // offset of local variables relative to frame pointer is negative
       compile_variable(-number_of_local_variable_bytes);
+      // Assignment 7
+      number_of_local_variable_bytes = number_of_local_variable_bytes * WORDSIZE;
 
       get_expected_symbol(SYM_SEMICOLON);
     }
-
     procedure_prologue(number_of_local_variable_bytes);
 
     // macros require access to current procedure
@@ -5662,7 +6981,7 @@ void compile_cstar() {
   uint64_t current_line_number;
   uint64_t initial_value;
   uint64_t* entry;
-
+   
   while (symbol != SYM_EOF) {
     while (look_for_type()) {
       syntax_error_unexpected();
@@ -5676,6 +6995,7 @@ void compile_cstar() {
     if (symbol == SYM_VOID) {
       // void identifier ...
       // procedure declaration or definition
+
       get_symbol();
 
       if (symbol == SYM_ASTERISK) {
@@ -5694,21 +7014,27 @@ void compile_cstar() {
         compile_procedure(variable_or_procedure_name, type);
       } else
         syntax_error_symbol(SYM_IDENTIFIER);
-    } else {
-      type = compile_type();
+    } else if (symbol == SYM_STRUCT){
 
+      compile_structs();
+      } else {
+      type = compile_type();
+      
       if (symbol == SYM_IDENTIFIER) {
         variable_or_procedure_name = identifier;
 
         get_symbol();
+       
+      
 
         if (symbol == SYM_LPARENTHESIS)
           // type identifier "(" ...
           // procedure declaration or definition
           compile_procedure(variable_or_procedure_name, type);
         else {
+         
           current_line_number = line_number;
-
+         
           if (symbol == SYM_SEMICOLON) {
             // type identifier ";" ...
             // global variable declaration
@@ -5716,6 +7042,7 @@ void compile_cstar() {
 
             // uninitialized global variables are initialized to 0
             initial_value = 0;
+          
           } else
             // type identifier "=" ...
             // global variable definition
@@ -6567,13 +7894,16 @@ void decode_u_format() {
 // ---------------------------- BINARY -----------------------------
 // -----------------------------------------------------------------
 
+// Assignment 3
 uint64_t get_total_number_of_instructions() {
-  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
+  return ic_lui + ic_addi + ic_add + ic_sub + ic_mul + ic_divu + ic_and + ic_or + ic_xori + ic_sll + ic_srl + ic_remu + ic_sltu + ic_load + ic_store + ic_beq + ic_jal + ic_jalr + ic_ecall;
 }
 
-uint64_t get_total_number_of_nops() {
-  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_divu + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
+// Assignment 3
+uint64_t get_total_number_of_nops() { // Assignment 4
+  return nopc_lui + nopc_addi + nopc_add + nopc_sub + nopc_mul + nopc_and + nopc_or + nopc_xori + nopc_divu + nopc_sll + nopc_srl + nopc_remu + nopc_sltu + nopc_load + nopc_store + nopc_beq + nopc_jal + nopc_jalr;
 }
+
 
 void print_instruction_counter(uint64_t counter, uint64_t ins) {
   printf("%s: %lu(%lu.%.2lu%%)",
@@ -6747,6 +8077,30 @@ void emit_add(uint64_t rd, uint64_t rs1, uint64_t rs2) {
   emit_instruction(encode_r_format(F7_ADD, rs2, rs1, F3_ADD, rd, OP_OP));
 
   ic_add = ic_add + 1;
+}
+// Assignment 3
+void emit_sll(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SLL, rs2, rs1, F3_SLL, rd, OP_OP));
+  ic_sll = ic_sll + 1;
+}
+
+void emit_srl(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_SRL, rs2, rs1, F3_SRL, rd, OP_OP));
+  ic_srl = ic_srl + 1;
+}
+// Assignment 4
+void emit_and(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  emit_instruction(encode_r_format(F7_AND, rs2, rs1, F3_AND, rd, OP_OP));
+  ic_and = ic_and + 1;
+}
+void emit_or(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+
+  emit_instruction(encode_r_format(F7_OR, rs2, rs1, F3_OR, rd, OP_OP));
+  ic_or = ic_or + 1;
+}
+void emit_xori(uint64_t rd, uint64_t rs1, uint64_t immediate) {
+  emit_instruction(encode_i_format(immediate, rs1, F3_XORI, rd, OP_IMM));
+  ic_xori = ic_xori + 1;
 }
 
 void emit_sub(uint64_t rd, uint64_t rs1, uint64_t rs2) {
@@ -9222,6 +10576,129 @@ void do_add() {
 
   ic_add = ic_add + 1;
 }
+// Assignment 4
+void do_and() {
+  uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
+  if (rd != REG_ZR) {
+    // semantics of add
+    next_rd_value = *(registers + rs1) & *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_and = nopc_and + 1;
+  } else
+    nopc_and = nopc_and + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_and = ic_and + 1;
+}
+void do_or() {
+  uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
+  if (rd != REG_ZR) {
+    // semantics of add
+    next_rd_value = *(registers + rs1) | *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_or = nopc_or + 1;
+  } else
+    nopc_or = nopc_or + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_or = ic_or + 1;
+}
+
+void do_xori() {
+  uint64_t next_rd_value;
+
+  read_register_wrap(rs1, imm);
+
+  if (rd != REG_ZR) {
+    // semantics of addi
+    next_rd_value = ~(*(registers + rs1));
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_xori = nopc_xori + 1;
+  } else
+    nopc_xori = nopc_xori + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_xori = ic_xori + 1;
+}
+
+
+// Assignment 3
+
+
+  void do_sll() {
+   uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
+  if (rd != REG_ZR) {
+    next_rd_value = *(registers + rs1) << *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_sll = nopc_sll + 1;
+  } else
+      nopc_sll = nopc_sll + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_sll = ic_sll + 1;
+}
+
+void do_srl() {
+   uint64_t next_rd_value;
+
+  read_register(rs1);
+  read_register(rs2);
+
+  if (rd != REG_ZR) {
+    next_rd_value = *(registers + rs1) >> *(registers + rs2);
+
+    if (*(registers + rd) != next_rd_value)
+      *(registers + rd) = next_rd_value;
+    else
+      nopc_srl = nopc_srl + 1;
+  } else
+      nopc_srl = nopc_srl + 1;
+
+  write_register(rd);
+
+  pc = pc + INSTRUCTIONSIZE;
+
+  ic_srl = ic_srl + 1;
+}
+
+
+
+
 
 void do_sub() {
   uint64_t next_rd_value;
@@ -9833,6 +11310,16 @@ uint64_t print_instruction() {
     return print_store();
   else if (is == ADD)
     return print_add_sub_mul_divu_remu_sltu();
+  else if (is == SLL)
+    return print_add_sub_mul_divu_remu_sltu(); // Assignment 3
+  else if (is == SRL)
+    return print_add_sub_mul_divu_remu_sltu();
+  else if (is == AND) // Assignment 4
+    return print_add_sub_mul_divu_remu_sltu();
+  else if (is == OR)
+    return print_add_sub_mul_divu_remu_sltu();
+  else if (is == XORI) // must be changed to addi since XORI is type I Format and not R type.
+    return print_addi();
   else if (is == SUB)
     return print_add_sub_mul_divu_remu_sltu();
   else if (is == MUL)
@@ -10092,7 +11579,13 @@ void decode() {
   } else if (opcode == OP_OP) { // could be ADD, SUB, MUL, DIVU, REMU, SLTU
     decode_r_format();
 
-    if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
+    // Assignment 3
+    if(funct3 == F3_SLL){
+      if(funct7 == F7_SLL)
+        is = SLL;
+     } 
+
+    else if (funct3 == F3_ADD) { // = F3_SUB = F3_MUL
       if (funct7 == F7_ADD)
         is = ADD;
       else if (funct7 == F7_SUB)
@@ -10102,12 +11595,22 @@ void decode() {
     } else if (funct3 == F3_DIVU) {
       if (funct7 == F7_DIVU)
         is = DIVU;
+       if(funct7 == F7_SRL) // Assignment 3
+        is = SRL;
     } else if (funct3 == F3_REMU) {
       if (funct7 == F7_REMU)
         is = REMU;
+       if(funct7 == F7_AND) // Assignment 4
+        is = AND;
     } else if (funct3 == F3_SLTU) {
       if (funct7 == F7_SLTU)
         is = SLTU;
+    } // Assignment 4
+
+   
+    else if (funct3 == F3_OR){
+      if(funct7 == F7_OR)
+        is = OR;
     }
   } else if (opcode == OP_BRANCH) {
     decode_b_format();
@@ -10178,6 +11681,16 @@ void execute() {
     do_divu();
   else if (is == REMU)
     do_remu();
+  else if (is == SLL)   //Assignment3
+    do_sll();
+  else if(is == SRL)   //Assignment3
+    do_srl();
+  else if(is == AND) // Assignment 4
+    do_and();
+  else if(is == OR)
+    do_or();
+  else if(is == XORI)
+    do_xori();
   else if (is == SLTU)
     do_sltu();
   else if (is == BEQ)
@@ -10221,7 +11734,27 @@ void execute_record() {
   } else if (is == SLTU) {
     record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
     do_sltu();
-  } else if (is == BEQ) {
+ }// Assignment 3
+    else if (is == SLL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_sll();
+  } else if (is == SRL){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_srl();
+  } // Assignment 4
+   else if (is == AND){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_and();
+  } 
+  else if (is == OR){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_or();
+  }
+  else if (is == XORI){
+    record_lui_addi_add_sub_mul_divu_remu_sltu_jal_jalr();
+    do_xori();
+  }  
+   else if (is == BEQ) {
     record_beq();
     do_beq();
   } else if (is == JAL) {
@@ -10286,8 +11819,33 @@ void execute_debug() {
     print_add_sub_mul_divu_remu_sltu_before();
     do_remu();
     print_addi_add_sub_mul_divu_remu_sltu_after();
-  } else if (is == SLTU) {
+} // Assignment 3
+  else if (is == SLL) {
     print_add_sub_mul_divu_remu_sltu_before();
+    do_sll();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  }else if (is == SRL) {
+    print_add_sub_mul_divu_remu_sltu_before();
+    do_srl();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  } // Assignment 4
+  else if (is == AND) {
+    print_add_sub_mul_divu_remu_sltu_before();
+    do_and();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  }
+  else if (is == OR) {
+    print_add_sub_mul_divu_remu_sltu_before();
+    do_or();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  }
+  else if (is == XORI) {
+    print_add_sub_mul_divu_remu_sltu_before();
+    do_xori();
+    print_addi_add_sub_mul_divu_remu_sltu_after();
+  }
+   else if (is == SLTU) {
+      print_add_sub_mul_divu_remu_sltu_before();
     do_sltu();
     print_addi_add_sub_mul_divu_remu_sltu_after();
   } else if (is == BEQ) {
@@ -11679,6 +13237,8 @@ void print_synopsis(char* extras) {
 // -----------------------------------------------------------------
 
 uint64_t selfie(uint64_t extras) {
+      printf("%s: This is Michael Lenort's Selfie!\n", selfie_name);
+
   if (number_of_remaining_arguments() == 0)
     return EXITCODE_NOARGUMENTS;
   else {
